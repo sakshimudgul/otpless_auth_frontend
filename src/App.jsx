@@ -10,7 +10,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<PhoneLogin />} />
+        <Route path="/" element={<PhoneLogin />} />
         <Route path="/verify" element={<VerifyOtp />} />
         <Route path="/dashboard" element={token ? <Dashboard /> : <Navigate to="/login" />} />
         <Route path="/" element={<Navigate to="/login" />} />
