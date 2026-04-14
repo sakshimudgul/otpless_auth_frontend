@@ -110,21 +110,21 @@ export default function PhoneLogin() {
   const { setIdentifier } = useAuthStore();
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!phone) return;
-    
-    setLoading(true);
-    try {
-      await sendOtp({ phone });
-      setIdentifier(phone);
-      navigate('/verify');
-    } catch (error) {
-      alert(error.response?.data?.error || 'Failed to send OTP');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  e.preventDefault();
+  if (!phone) return;
+  
+  setLoading(true);
+  try {
+    // Send with 'phone' field
+    await sendOtp({ phone: phone });
+    setIdentifier(phone);
+    navigate('/verify');
+  } catch (error) {
+    alert(error.response?.data?.error || 'Failed to send OTP');
+  } finally {
+    setLoading(false);
+  }
+};
   const inputStyle = {
     ...styles.input,
     ...(isFocused && styles.inputFocus),

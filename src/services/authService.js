@@ -1,16 +1,24 @@
 import api from './api';
 
 export const sendOtp = async (data) => {
-  const response = await api.post('/auth/send-otp', data);
+  // Send with 'phone' field
+  const response = await api.post('/auth/send-otp', {
+    phone: data.phone || data.phoneNumber
+  });
   return response.data;
 };
 
 export const verifyOtp = async (data) => {
-  const response = await api.post('/auth/verify-otp', data);
+  // Send with 'phone' and 'otp' fields
+  const response = await api.post('/auth/verify-otp', {
+    phone: data.identifier || data.phone,
+    otp: data.otp,
+    name: data.name
+  });
   return response.data;
 };
 
-// Remove these client-related functions
-// export const getMyClients = async () => { ... }
-// export const createClient = async (clientData) => { ... }
-// export const deleteClient = async (clientId) => { ... }
+export const getProfile = async () => {
+  const response = await api.get('/auth/profile');
+  return response.data;
+};

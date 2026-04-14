@@ -125,23 +125,28 @@ export default function VerifyOtp() {
   };
 
   const handleVerify = async () => {
-    const otpCode = otp.join('');
-    if (otpCode.length !== 6) return;
+  const otpCode = otp.join('');
+  if (otpCode.length !== 6) return;
 
-    setLoading(true);
-    try {
-      const { token, user } = await verifyOtp({ identifier, otp: otpCode });
-      setToken(token);
-      setUser(user);
-      navigate('/dashboard');
-    } catch (error) {
-      alert(error.response?.data?.error || 'Invalid OTP');
-      setOtp(['', '', '', '', '', '']);
-      inputRefs.current[0]?.focus();
-    } finally {
-      setLoading(false);
-    }
-  };
+  setLoading(true);
+  try {
+    // Send with 'phone' and 'otp' fields
+    const { token, user } = await verifyOtp({ 
+      identifier: identifier,  // This will be mapped to 'phone' in authService
+      otp: otpCode,
+      name: username || null
+    });
+    setToken(token);
+    setUser(user);
+    navigate('/dashboard');
+  } catch (error) {
+    alert(error.response?.data?.error || 'Invalid OTP');
+    setOtp(['', '', '', '', '', '']);
+    inputRefs.current[0]?.focus();
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div style={styles.container}>
