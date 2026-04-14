@@ -1,17 +1,16 @@
+// frontend/src/services/authService.js
 import api from './api';
 
 export const sendOtp = async (data) => {
-  // Send with 'phone' field
   const response = await api.post('/auth/send-otp', {
-    phone: data.phone || data.phoneNumber
+    phone: data.phone
   });
   return response.data;
 };
 
 export const verifyOtp = async (data) => {
-  // Send with 'phone' and 'otp' fields
   const response = await api.post('/auth/verify-otp', {
-    phone: data.identifier || data.phone,
+    phone: data.phone,  // Make sure this is 'phone', not 'identifier'
     otp: data.otp,
     name: data.name
   });

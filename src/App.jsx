@@ -10,10 +10,20 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<PhoneLogin />} />
+        {/* Login route - matches "/login" */}
+        <Route path="/login" element={<PhoneLogin />} />
+        
+        {/* Verify OTP route */}
         <Route path="/verify" element={<VerifyOtp />} />
+        
+        {/* Dashboard route - protected */}
         <Route path="/dashboard" element={token ? <Dashboard /> : <Navigate to="/login" />} />
+        
+        {/* Default route - redirect to login */}
         <Route path="/" element={<Navigate to="/login" />} />
+        
+        {/* Catch all - redirect to login */}
+        <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
     </BrowserRouter>
   );

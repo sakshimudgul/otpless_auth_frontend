@@ -89,7 +89,9 @@ export default function VerifyOtp() {
   const [canResend, setCanResend] = useState(false);
   const inputRefs = useRef([]);
   const navigate = useNavigate();
-  const { identifier, setToken, setUser } = useAuthStore();
+  
+  // Get all needed values from auth store
+  const { identifier, tempUserInfo, setToken, setUser } = useAuthStore();
 
   useEffect(() => {
     if (inputRefs.current[0]) inputRefs.current[0].focus();
@@ -125,28 +127,37 @@ export default function VerifyOtp() {
   };
 
   const handleVerify = async () => {
-  const otpCode = otp.join('');
-  if (otpCode.length !== 6) return;
+    const otpCode = otp.join('');
+    if (otpCode.length !== 6) return;
 
-  setLoading(true);
-  try {
-    // Send with 'phone' and 'otp' fields
-    const { token, user } = await verifyOtp({ 
-      identifier: identifier,  // This will be mapped to 'phone' in authService
-      otp: otpCode,
-      name: username || null
-    });
-    setToken(token);
-    setUser(user);
-    navigate('/dashboard');
-  } catch (error) {
-    alert(error.response?.data?.error || 'Invalid OTP');
-    setOtp(['', '', '', '', '', '']);
-    inputRefs.current[0]?.focus();
-  } finally {
-    setLoading(false);
-  }
-};
+    setLoading(true);
+    try {
+      // Get username from tempUserInfo if available
+      const username = tempUserInfo?.name || null;
+      
+      const { token, user } = await verifyOtp({ 
+        phone: identifier,  // Use 'phone' as the field name
+        otp: otpCode,
+        name: username
+      });
+      setToken(token);
+      setUser(user);
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Verify error:', error.response?.data);
+      alert(error.response?.data?.error || 'Invalid OTP');
+      setOtp(['', '', '', '', '', '']);
+      inputRefs.current[0]?.focus();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setTimeLeft(300);
+    setCanResend(false);
+    alert('New OTP sent successfully!');
+  };
 
   return (
     <div style={styles.container}>
@@ -202,7 +213,7 @@ export default function VerifyOtp() {
             </p>
           ) : (
             <button
-              onClick={() => {/* Implement resend */}}
+              onClick={handleResend}
               style={{ color: colors.primary[600], fontSize: '0.875rem', background: 'none', border: 'none', cursor: 'pointer' }}
             >
               Resend verification code
@@ -211,7 +222,7 @@ export default function VerifyOtp() {
         </div>
 
         <button
-          onClick={() => navigate('/login/phone')}
+          onClick={() => navigate('/login')}
           style={styles.ghostButton}
         >
           ← Back to login

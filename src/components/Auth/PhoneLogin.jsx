@@ -52,6 +52,16 @@ const styles = {
     color: colors.gray[700],
     marginBottom: '0.5rem',
   },
+  optionalBadge: {
+    display: 'inline-block',
+    marginLeft: '0.5rem',
+    padding: '0.125rem 0.5rem',
+    fontSize: '0.625rem',
+    fontWeight: '500',
+    color: colors.gray[500],
+    backgroundColor: colors.gray[100],
+    borderRadius: '0.375rem',
+  },
   input: {
     width: '100%',
     padding: '0.75rem 1rem',
@@ -104,31 +114,37 @@ const styles = {
 
 export default function PhoneLogin() {
   const [phone, setPhone] = useState('');
+  const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
+  const [isFocused, setIsFocused] = useState({ phone: false, username: false });
   const navigate = useNavigate();
-  const { setIdentifier } = useAuthStore();
+  const { setIdentifier, setUserInfo } = useAuthStore();
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  if (!phone) return;
-  
-  setLoading(true);
-  try {
-    // Send with 'phone' field
-    await sendOtp({ phone: phone });
-    setIdentifier(phone);
-    navigate('/verify');
-  } catch (error) {
-    alert(error.response?.data?.error || 'Failed to send OTP');
-  } finally {
-    setLoading(false);
-  }
-};
-  const inputStyle = {
-    ...styles.input,
-    ...(isFocused && styles.inputFocus),
+    e.preventDefault();
+    if (!phone) return;
+    
+    setLoading(true);
+    try {
+      // Store username if provided
+      if (username) {
+        setUserInfo({ name: username });
+      }
+      
+      await sendOtp({ phone: phone });
+      setIdentifier(phone);
+      navigate('/verify');
+    } catch (error) {
+      alert(error.response?.data?.error || 'Failed to send OTP');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const getInputStyle = (field) => ({
+    ...styles.input,
+    ...(isFocused[field] && styles.inputFocus),
+  });
 
   return (
     <div style={styles.container}>
@@ -146,21 +162,37 @@ export default function PhoneLogin() {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label style={styles.label}>Phone Number</label>
+          <div style={{ marginBottom: '1rem' }}>
+            <label style={styles.label}>
+              Phone Number <span style={styles.optionalBadge}>Required</span>
+            </label>
             <input
               type="tel"
-              placeholder="+1 234 567 8900"
+              placeholder="Enter your phone number"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              onFocus={() => setIsFocused(true)}
-              onBlur={() => setIsFocused(false)}
-              style={inputStyle}
+              onFocus={() => setIsFocused({ ...isFocused, phone: true })}
+              onBlur={() => setIsFocused({ ...isFocused, phone: false })}
+              style={getInputStyle('phone')}
+              disabled={loading}
+              required
+            />
+          </div>
+
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={styles.label}>
+              Name <span style={styles.optionalBadge}>Optional</span>
+            </label>
+            <input
+              type="text"
+              placeholder="Enter your name (optional)"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              onFocus={() => setIsFocused({ ...isFocused, username: true })}
+              onBlur={() => setIsFocused({ ...isFocused, username: false })}
+              style={getInputStyle('username')}
               disabled={loading}
             />
-            <p style={{ fontSize: '0.75rem', color: colors.gray[500], marginTop: '0.5rem' }}>
-              We'll send you a 6-digit verification code
-            </p>
           </div>
 
           <button
