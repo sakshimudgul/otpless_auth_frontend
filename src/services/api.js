@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://otpless-auth-backend-2.onrender.com/api/auth/send-otp'||'https://otpless-auth-backend-2.onrender.com'; 
+const API_URL = import.meta.env.VITE_API_URL ||'https://otpless-auth-backend-2.onrender.com'; 
 
 const api = axios.create({
   baseURL: API_URL,
@@ -18,7 +18,7 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
-  },
+  },                                    
   (error) => Promise.reject(error)
 );
 
