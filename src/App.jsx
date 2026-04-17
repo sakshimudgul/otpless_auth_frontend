@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
-import PhoneLogin from './components/Auth/PhoneLogin';
+import PhoneLogin from './components/Auth/phoneLogin';
 import VerifyOtp from './components/Auth/VerifyOtp';
 import Dashboard from './components/Dashboard/Dashboard';
 
