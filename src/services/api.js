@@ -2,7 +2,7 @@ import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 
 // Get API URL from environment variables
-const API_URL = import.meta.env.VITE_API_URL || 'https://otpless-auth-backend-2.onrender.com/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 console.log('API URL:', API_URL); // For debugging
 
