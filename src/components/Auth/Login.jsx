@@ -19,14 +19,11 @@ export default function Login() {
     try {
       if (name) setUserInfo({ name });
       
-      let response;
       if (method === 'sms') {
-        response = await sendSmsOtp({ phone, name });
+        await sendSmsOtp({ phone, name });
       } else {
-        response = await sendWhatsAppOtp({ phone, name });
+        await sendWhatsAppOtp({ phone, name });
       }
-      
-      console.log(`${method.toUpperCase()} OTP Response:`, response);
       
       setIdentifier(phone);
       navigate('/verify', { state: { method } });
@@ -39,86 +36,83 @@ export default function Login() {
 
   return (
     <div className="login-container">
-      <div className="login-card">
-        <div className="brand">
+      <div className="login-wrapper">
+        <div className="login-brand">
           <div className="brand-icon">
             <svg viewBox="0 0 24 24" fill="none">
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm0 13c-2.33 0-4.31-1.46-5.11-3.5h10.22c-.8 2.04-2.78 3.5-5.11 3.5z" fill="currentColor"/>
             </svg>
           </div>
           <h1>OTP<span>less</span></h1>
-          <p>Secure passwordless authentication</p>
+          <p>Passwordless authentication</p>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="input-group">
-            <input
-              type="tel"
-              id="phone"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              required
-              placeholder=" "
-            />
-            <label htmlFor="phone">Phone Number</label>
-            <span className="input-icon">📱</span>
+        <div className="login-card">
+          <div className="card-header">
+            <h2>Welcome back</h2>
+            <p>Sign in to continue</p>
           </div>
 
-          <div className="input-group">
-            <input
-              type="text"
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder=" "
-            />
-            <label htmlFor="name">Your Name (Optional)</label>
-            <span className="input-icon">👤</span>
-          </div>
-
-          <div className="method-section">
-            <label>Choose Delivery Method</label>
-            <div className="method-options">
-              <button
-                type="button"
-                className={`method-btn ${method === 'sms' ? 'active' : ''}`}
-                onClick={() => setMethod('sms')}
-              >
-                <span className="method-icon">📱</span>
-                <span className="method-name">SMS</span>
-                <span className="method-desc">Get OTP via text message</span>
-              </button>
-              <button
-                type="button"
-                className={`method-btn ${method === 'whatsapp' ? 'active' : ''}`}
-                onClick={() => setMethod('whatsapp')}
-              >
-                <span className="method-icon">💚</span>
-                <span className="method-name">WhatsApp</span>
-                <span className="method-desc">Get OTP on WhatsApp</span>
-              </button>
+          <form onSubmit={handleSubmit}>
+            <div className="input-group">
+              <input
+                type="tel"
+                id="phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required
+                placeholder=" "
+              />
+              <label htmlFor="phone">Phone Number</label>
+              <span className="input-icon">📱</span>
             </div>
+
+            <div className="input-group">
+              <input
+                type="text"
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder=" "
+              />
+              <label htmlFor="name">Your Name (Optional)</label>
+              <span className="input-icon">👤</span>
+            </div>
+
+            <div className="method-section">
+              <label>Delivery Method</label>
+              <div className="method-buttons">
+                <button
+                  type="button"
+                  className={`method-btn ${method === 'sms' ? 'active' : ''}`}
+                  onClick={() => setMethod('sms')}
+                >
+                  <span>📱</span>
+                  <span>SMS</span>
+                </button>
+                <button
+                  type="button"
+                  className={`method-btn ${method === 'whatsapp' ? 'active' : ''}`}
+                  onClick={() => setMethod('whatsapp')}
+                >
+                  <span>💚</span>
+                  <span>WhatsApp</span>
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" className="submit-btn" disabled={loading || !phone}>
+              {loading ? (
+                <div className="spinner"></div>
+              ) : (
+                <>Continue →</>
+              )}
+            </button>
+          </form>
+
+          <div className="card-footer">
+            <p>By continuing, you agree to our <a href="#">Terms</a> & <a href="#">Privacy</a></p>
           </div>
-
-          <button type="submit" disabled={loading || !phone}>
-            {loading ? (
-              <>
-                <span className="spinner"></span>
-                Sending {method.toUpperCase()} OTP...
-              </>
-            ) : (
-              <>
-                Continue with {method.toUpperCase()}
-                <svg viewBox="0 0 24 24" fill="none">
-                  <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-              </>
-            )}
-          </button>
-        </form>
-
-        <div className="footer">
-          <p>By continuing, you agree to our <a href="#">Terms</a> & <a href="#">Privacy</a></p>
         </div>
       </div>
 
@@ -131,75 +125,84 @@ export default function Login() {
 
         .login-container {
           min-height: 100vh;
+          background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .login-wrapper {
+          display: flex;
+          min-height: 100vh;
+        }
+
+        /* Left Side - Brand */
+        .login-brand {
+          flex: 1;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          padding: 3rem;
+          color: white;
+        }
+
+        .brand-icon {
+          width: 80px;
+          height: 80px;
+          background: rgba(255,255,255,0.2);
+          border-radius: 20px;
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-          padding: 1rem;
+          margin-bottom: 1.5rem;
         }
 
+        .brand-icon svg {
+          width: 45px;
+          height: 45px;
+        }
+
+        .login-brand h1 {
+          font-size: 2.5rem;
+          font-weight: 700;
+          margin-bottom: 0.5rem;
+        }
+
+        .login-brand h1 span {
+          font-weight: 300;
+        }
+
+        .login-brand p {
+          opacity: 0.9;
+          font-size: 0.9rem;
+        }
+
+        /* Right Side - Form */
         .login-card {
-          max-width: 450px;
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          padding: 2rem;
+          max-width: 500px;
+          margin: 0 auto;
           width: 100%;
-          background: white;
-          border-radius: 2rem;
-          padding: 2.5rem;
-          box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-          animation: slideUp 0.5s ease-out;
         }
 
-        @keyframes slideUp {
-          from {
-            opacity: 0;
-            transform: translateY(30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        .brand {
+        .card-header {
           text-align: center;
           margin-bottom: 2rem;
         }
 
-        .brand-icon {
-          width: 70px;
-          height: 70px;
-          background: linear-gradient(135deg, #667eea, #764ba2);
-          border-radius: 1.5rem;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin: 0 auto 1rem;
+        .card-header h2 {
+          font-size: 1.75rem;
+          color: #1a1a2e;
+          margin-bottom: 0.5rem;
         }
 
-        .brand-icon svg {
-          width: 40px;
-          height: 40px;
-          color: white;
-        }
-
-        .brand h1 {
-          font-size: 2rem;
-          font-weight: 700;
-          background: linear-gradient(135deg, #667eea, #764ba2);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-        }
-
-        .brand h1 span {
-          background: linear-gradient(135deg, #f093fb, #f5576c);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-        }
-
-        .brand p {
-          color: #6b7280;
-          font-size: 0.875rem;
-          margin-top: 0.5rem;
+        .card-header p {
+          color: #666;
+          font-size: 0.9rem;
         }
 
         .input-group {
@@ -211,8 +214,8 @@ export default function Login() {
           width: 100%;
           padding: 1rem 1rem 1rem 3rem;
           font-size: 1rem;
-          border: 2px solid #e5e7eb;
-          border-radius: 1rem;
+          border: 2px solid #e0e0e0;
+          border-radius: 12px;
           background: white;
           transition: all 0.3s;
           outline: none;
@@ -228,7 +231,7 @@ export default function Login() {
           left: 3rem;
           top: 50%;
           transform: translateY(-50%);
-          color: #9ca3af;
+          color: #999;
           transition: all 0.3s;
           pointer-events: none;
           background: white;
@@ -248,7 +251,7 @@ export default function Login() {
           left: 1rem;
           top: 50%;
           transform: translateY(-50%);
-          font-size: 1.25rem;
+          font-size: 1.2rem;
         }
 
         .method-section {
@@ -257,13 +260,13 @@ export default function Login() {
 
         .method-section label {
           display: block;
-          font-size: 0.875rem;
+          font-size: 0.85rem;
           font-weight: 500;
-          color: #374151;
+          color: #333;
           margin-bottom: 0.75rem;
         }
 
-        .method-options {
+        .method-buttons {
           display: flex;
           gap: 1rem;
         }
@@ -271,56 +274,37 @@ export default function Login() {
         .method-btn {
           flex: 1;
           display: flex;
-          flex-direction: column;
           align-items: center;
+          justify-content: center;
           gap: 0.5rem;
-          padding: 1rem;
-          border: 2px solid #e5e7eb;
-          border-radius: 1rem;
+          padding: 0.75rem;
+          border: 2px solid #e0e0e0;
+          border-radius: 12px;
           background: white;
           cursor: pointer;
           transition: all 0.3s;
+          font-weight: 500;
+          color: #666;
         }
 
         .method-btn:hover {
           border-color: #667eea;
           background: #f8f9ff;
-          transform: translateY(-2px);
         }
 
         .method-btn.active {
           border-color: #667eea;
-          background: linear-gradient(135deg, #667eea, #764ba2);
-        }
-
-        .method-btn.active .method-icon,
-        .method-btn.active .method-name,
-        .method-btn.active .method-desc {
+          background: #667eea;
           color: white;
         }
 
-        .method-icon {
-          font-size: 2rem;
-        }
-
-        .method-name {
-          font-size: 1rem;
-          font-weight: 600;
-          color: #1f2937;
-        }
-
-        .method-desc {
-          font-size: 0.7rem;
-          color: #6b7280;
-        }
-
-        button[type="submit"] {
+        .submit-btn {
           width: 100%;
           padding: 1rem;
           background: linear-gradient(135deg, #667eea, #764ba2);
           color: white;
           border: none;
-          border-radius: 1rem;
+          border-radius: 12px;
           font-size: 1rem;
           font-weight: 600;
           cursor: pointer;
@@ -328,15 +312,14 @@ export default function Login() {
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 0.5rem;
         }
 
-        button[type="submit"]:hover:not(:disabled) {
+        .submit-btn:hover:not(:disabled) {
           transform: translateY(-2px);
           box-shadow: 0 10px 25px -5px rgba(102,126,234,0.4);
         }
 
-        button[type="submit"]:disabled {
+        .submit-btn:disabled {
           opacity: 0.6;
           cursor: not-allowed;
         }
@@ -354,32 +337,32 @@ export default function Login() {
           to { transform: rotate(360deg); }
         }
 
-        .footer {
+        .card-footer {
           text-align: center;
           margin-top: 1.5rem;
           padding-top: 1.5rem;
-          border-top: 1px solid #e5e7eb;
+          border-top: 1px solid #e0e0e0;
         }
 
-        .footer p {
+        .card-footer p {
           font-size: 0.75rem;
-          color: #9ca3af;
+          color: #999;
         }
 
-        .footer a {
+        .card-footer a {
           color: #667eea;
           text-decoration: none;
         }
 
-        @media (max-width: 640px) {
+        @media (max-width: 768px) {
+          .login-wrapper {
+            flex-direction: column;
+          }
+          .login-brand {
+            padding: 2rem;
+          }
           .login-card {
-            padding: 1.5rem;
-          }
-          .method-desc {
-            display: none;
-          }
-          .method-btn {
-            padding: 0.75rem;
+            padding: 2rem 1.5rem;
           }
         }
       `}</style>

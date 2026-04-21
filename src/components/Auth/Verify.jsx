@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { verifySmsOtp, verifyWhatsAppOtp } from '../../services/authService';
+import { verifySmsOtp, verifyWhatsAppOtp, sendSmsOtp, sendWhatsAppOtp } from '../../services/authService';
 import { useAuthStore } from '../../store/authStore';
 
 export default function Verify() {
@@ -56,7 +56,7 @@ export default function Verify() {
       } else {
         await sendWhatsAppOtp({ phone: identifier, name: tempUserInfo?.name });
       }
-      alert(`${method.toUpperCase()} OTP resent successfully!`);
+      alert(`${method.toUpperCase()} OTP resent!`);
     } catch (error) {
       alert(`Failed to resend ${method.toUpperCase()} OTP`);
     }
@@ -70,20 +70,10 @@ export default function Verify() {
     try {
       let response;
       if (method === 'sms') {
-        response = await verifySmsOtp({ 
-          phone: identifier, 
-          otp: otpCode,
-          name: tempUserInfo?.name || null
-        });
+        response = await verifySmsOtp({ phone: identifier, otp: otpCode, name: tempUserInfo?.name });
       } else {
-        response = await verifyWhatsAppOtp({ 
-          phone: identifier, 
-          otp: otpCode,
-          name: tempUserInfo?.name || null
-        });
+        response = await verifyWhatsAppOtp({ phone: identifier, otp: otpCode, name: tempUserInfo?.name });
       }
-      
-      console.log(`${method.toUpperCase()} Verify response:`, response);
       
       if (response.success && response.token) {
         setToken(response.token);
@@ -95,7 +85,6 @@ export default function Verify() {
         inputRefs.current[0]?.focus();
       }
     } catch (error) {
-      console.error('Verify error:', error);
       alert(error.response?.data?.error || 'Invalid OTP');
       setOtp(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
@@ -108,20 +97,17 @@ export default function Verify() {
     <div className="verify-container">
       <div className="verify-card">
         <button className="back-btn" onClick={() => navigate('/')}>
-          <svg viewBox="0 0 24 24" fill="none">
-            <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-          Back
+          ← Back
         </button>
 
         <div className="verify-icon">
           {method === 'sms' ? '📱' : '💚'}
         </div>
 
-        <h2>Verify via {method.toUpperCase()}</h2>
-        <p>Enter the 6-digit code sent to <strong>{identifier}</strong></p>
+        <h2>Verify your identity</h2>
+        <p>Enter the 6-digit code sent to <strong>{identifier}</strong> via {method.toUpperCase()}</p>
 
-        <div className="otp-container">
+        <div className="otp-group">
           {otp.map((digit, index) => (
             <input
               key={index}
@@ -138,21 +124,14 @@ export default function Verify() {
         </div>
 
         <button className="verify-btn" onClick={handleVerify} disabled={loading || otp.join('').length !== 6}>
-          {loading ? (
-            <>
-              <span className="spinner"></span>
-              Verifying...
-            </>
-          ) : (
-            'Verify & Continue'
-          )}
+          {loading ? <div className="spinner"></div> : 'Verify & Continue'}
         </button>
 
         <div className="resend-section">
           {!canResend ? (
             <p>Resend code in <strong>{formatTime(timeLeft)}</strong></p>
           ) : (
-            <button className="resend-btn" onClick={handleResend}>Resend {method.toUpperCase()} Code</button>
+            <button className="resend-btn" onClick={handleResend}>Resend Code</button>
           )}
         </div>
       </div>
@@ -160,34 +139,34 @@ export default function Verify() {
       <style>{`
         .verify-container {
           min-height: 100vh;
+          background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           font-family: 'Inter', sans-serif;
           padding: 1rem;
         }
 
         .verify-card {
-          max-width: 450px;
+          max-width: 480px;
           width: 100%;
           background: white;
-          border-radius: 2rem;
+          border-radius: 24px;
           padding: 2.5rem;
-          box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-          position: relative;
           text-align: center;
-          animation: slideUp 0.5s ease-out;
+          position: relative;
+          box-shadow: 0 20px 40px -12px rgba(0,0,0,0.1);
+          animation: fadeIn 0.5s ease-out;
         }
 
-        @keyframes slideUp {
+        @keyframes fadeIn {
           from {
             opacity: 0;
-            transform: translateY(30px);
+            transform: scale(0.95);
           }
           to {
             opacity: 1;
-            transform: translateY(0);
+            transform: scale(1);
           }
         }
 
@@ -197,22 +176,14 @@ export default function Verify() {
           left: 1.5rem;
           background: none;
           border: none;
+          color: #999;
           cursor: pointer;
-          color: #9ca3af;
-          transition: all 0.3s;
-          display: flex;
-          align-items: center;
-          gap: 0.25rem;
-          font-size: 0.875rem;
+          font-size: 0.9rem;
+          transition: color 0.3s;
         }
 
         .back-btn:hover {
           color: #667eea;
-        }
-
-        .back-btn svg {
-          width: 18px;
-          height: 18px;
         }
 
         .verify-icon {
@@ -220,22 +191,22 @@ export default function Verify() {
           margin-bottom: 1rem;
         }
 
-        h2 {
-          font-size: 1.75rem;
-          color: #1e293b;
+        .verify-card h2 {
+          font-size: 1.5rem;
+          color: #1a1a2e;
           margin-bottom: 0.5rem;
         }
 
-        p {
-          color: #64748b;
+        .verify-card p {
+          color: #666;
           margin-bottom: 2rem;
         }
 
-        p strong {
+        .verify-card p strong {
           color: #667eea;
         }
 
-        .otp-container {
+        .otp-group {
           display: flex;
           justify-content: center;
           gap: 0.75rem;
@@ -248,8 +219,8 @@ export default function Verify() {
           text-align: center;
           font-size: 1.5rem;
           font-weight: 600;
-          border: 2px solid #e2e8f0;
-          border-radius: 1rem;
+          border: 2px solid #e0e0e0;
+          border-radius: 12px;
           background: white;
           transition: all 0.3s;
           outline: none;
@@ -258,7 +229,7 @@ export default function Verify() {
         .otp-input:focus {
           border-color: #667eea;
           box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
-          transform: scale(1.05);
+          transform: translateY(-2px);
         }
 
         .verify-btn {
@@ -267,15 +238,12 @@ export default function Verify() {
           background: linear-gradient(135deg, #667eea, #764ba2);
           color: white;
           border: none;
-          border-radius: 1rem;
+          border-radius: 12px;
           font-size: 1rem;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.3s;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 0.5rem;
+          margin-bottom: 1rem;
         }
 
         .verify-btn:hover:not(:disabled) {
@@ -295,6 +263,7 @@ export default function Verify() {
           border-top-color: transparent;
           border-radius: 50%;
           animation: spin 0.8s linear infinite;
+          margin: 0 auto;
         }
 
         @keyframes spin {
@@ -302,13 +271,12 @@ export default function Verify() {
         }
 
         .resend-section {
-          margin-top: 1.5rem;
+          text-align: center;
         }
 
         .resend-section p {
-          color: #94a3b8;
+          color: #999;
           font-size: 0.85rem;
-          margin-bottom: 0;
         }
 
         .resend-section p strong {
@@ -320,7 +288,6 @@ export default function Verify() {
           border: none;
           color: #667eea;
           font-size: 0.85rem;
-          font-weight: 500;
           cursor: pointer;
         }
 
