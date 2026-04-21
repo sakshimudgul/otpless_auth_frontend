@@ -1,4 +1,3 @@
-// frontend/src/store/authStore.js
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -8,12 +7,22 @@ export const useAuthStore = create(
       token: null,
       user: null,
       identifier: null,
-      tempUserInfo: null,  // Make sure this exists
-      setToken: (token) => set({ token }),
+      tempUserInfo: null,
+      setToken: (token) => {
+        if (token) {
+          localStorage.setItem('auth-token', token);
+        } else {
+          localStorage.removeItem('auth-token');
+        }
+        set({ token });
+      },
       setUser: (user) => set({ user }),
       setIdentifier: (identifier) => set({ identifier }),
       setUserInfo: (info) => set({ tempUserInfo: info }),
-      logout: () => set({ token: null, user: null, identifier: null, tempUserInfo: null }),
+      logout: () => {
+        localStorage.removeItem('auth-token');
+        set({ token: null, user: null, identifier: null, tempUserInfo: null });
+      },
     }),
     {
       name: 'auth-storage',
