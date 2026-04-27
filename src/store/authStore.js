@@ -6,26 +6,14 @@ export const useAuthStore = create(
     (set) => ({
       token: null,
       user: null,
+      userRole: null,
       identifier: null,
-      tempUserInfo: null,
-      setToken: (token) => {
-        if (token) {
-          localStorage.setItem('auth-token', token);
-        } else {
-          localStorage.removeItem('auth-token');
-        }
-        set({ token });
-      },
+      setToken: (token) => set({ token }),
       setUser: (user) => set({ user }),
+      setUserRole: (role) => set({ userRole: role }),
       setIdentifier: (identifier) => set({ identifier }),
-      setUserInfo: (info) => set({ tempUserInfo: info }),
-      logout: () => {
-        localStorage.removeItem('auth-token');
-        set({ token: null, user: null, identifier: null, tempUserInfo: null });
-      },
+      logout: () => set({ token: null, user: null, userRole: null, identifier: null }),
     }),
-    {
-      name: 'auth-storage',
-    }
+    { name: 'auth-storage' }
   )
 );
