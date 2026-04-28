@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { adminLogin, sendUserOtp } from '../services/authService';
+import { adminLogin, sendUserOtp, sendWhatsAppOtp } from '../services/authService';
 import { useAuthStore } from '../store/authStore';
 
 export default function Login() {
@@ -37,15 +37,13 @@ export default function Login() {
     setLoading(true);
     try {
       if (method === 'sms') {
-        // Use the working SMS endpoint
         await sendUserOtp({ phone, name: 'User' });
       } else {
-        // For WhatsApp, if not configured, show message
-        alert('WhatsApp OTP is currently in demo mode. Please use SMS.');
-        return;
+        // Call WhatsApp API
+        await sendWhatsAppOtp({ phone, name: 'User' });
       }
       setIdentifier(phone);
-      navigate('/verify');
+      navigate('/verify', { state: { method } });
     } catch (error) {
       alert(error.response?.data?.error || 'Failed to send OTP');
     } finally {
@@ -74,17 +72,24 @@ export default function Login() {
               required
             />
             <div className="method-group">
-              <button type="button" className={method === 'sms' ? 'active' : ''} onClick={() => setMethod('sms')}>
+              <button 
+                type="button" 
+                className={method === 'sms' ? 'active' : ''} 
+                onClick={() => setMethod('sms')}
+              >
                 📱 SMS
               </button>
-              <button type="button" className={method === 'whatsapp' ? 'active' : ''} onClick={() => setMethod('whatsapp')}>
+              <button 
+                type="button" 
+                className={method === 'whatsapp' ? 'active' : ''} 
+                onClick={() => setMethod('whatsapp')}
+              >
                 💚 WhatsApp
               </button>
             </div>
             <button type="submit" disabled={loading}>
               {loading ? 'Sending...' : 'Send OTP'}
             </button>
-            <p className="note">Note: WhatsApp is currently in demo mode. Please use SMS.</p>
           </form>
         ) : (
           <form onSubmit={handleAdminLogin}>
@@ -162,7 +167,6 @@ export default function Login() {
         .icon { font-size: 3rem; text-align: center; margin-bottom: 1rem; }
         h2 { text-align: center; margin-bottom: 0.5rem; color: #1a1a2e; }
         p { text-align: center; color: #666; margin-bottom: 1.5rem; font-size: 0.85rem; }
-        .note { color: #f59e0b; font-size: 0.75rem; margin-top: 1rem; }
         input {
           width: 100%;
           padding: 0.9rem;
@@ -194,6 +198,10 @@ export default function Login() {
           font-size: 1rem;
           font-weight: 600;
           cursor: pointer;
+        }
+        button[type="submit"]:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
         .footer { text-align: center; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #eee; font-size: 0.75rem; color: #999; }
       `}</style>

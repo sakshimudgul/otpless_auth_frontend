@@ -1,4 +1,3 @@
-// frontend/src/components/Admin/Dashboard.jsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
@@ -10,21 +9,23 @@ export default function AdminDashboard() {
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ name: '', phone: '', email: '' });
-  const { user, token, logout: clearStore } = useAuthStore();
+  const { user, logout: clearStore, token } = useAuthStore();
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (!token) {
+      navigate('/');
+      return;
+    }
     fetchUsers();
-  }, []);
+  }, [token]);
 
   const fetchUsers = async () => {
     try {
-      console.log('Fetching users...');
       const response = await api.get('/auth/admin/users');
-      console.log('Users response:', response.data);
       setUsers(response.data.users || []);
     } catch (error) {
-      console.error('Fetch users error:', error.response?.data || error.message);
+      console.error('Fetch users error:', error);
       if (error.response?.status === 401) {
         clearStore();
         navigate('/');
@@ -36,18 +37,31 @@ export default function AdminDashboard() {
     e.preventDefault();
     setLoading(true);
     try {
-      console.log('Creating user:', formData);
-      const response = await api.post('/auth/admin/create-user', formData);
-      console.log('Create response:', response.data);
+      await api.post('/auth/admin/users', {
+        name: formData.name,
+        phone: formData.phone,
+        email: formData.email || null
+      });
       setShowModal(false);
       setFormData({ name: '', phone: '', email: '' });
       fetchUsers();
       alert('User created successfully!');
     } catch (error) {
-      console.error('Create user error:', error.response?.data || error.message);
       alert(error.response?.data?.error || 'Failed to create user');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async (id) => {
+    if (window.confirm('Are you sure you want to delete this user?')) {
+      try {
+        await api.delete(`/auth/admin/users/${id}`);
+        fetchUsers();
+        alert('User deleted successfully');
+      } catch (error) {
+        alert('Failed to delete user');
+      }
     }
   };
 
@@ -70,12 +84,12 @@ export default function AdminDashboard() {
       <div className="content">
         <div className="card">
           <div className="card-header">
-            <h2>Users List</h2>
+            <h2>Users List ({users.length})</h2>
             <button onClick={() => setShowModal(true)}>+ Add User</button>
           </div>
           
           {users.length === 0 ? (
-            <p style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>No users found. Create your first user.</p>
+            <p style={{ textAlign: 'center', padding: '2rem' }}>No users found</p>
           ) : (
             <table className="user-table">
               <thead>
@@ -85,6 +99,7 @@ export default function AdminDashboard() {
                   <th>Email</th>
                   <th>Status</th>
                   <th>Created</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -95,6 +110,9 @@ export default function AdminDashboard() {
                     <td>{u.email || '-'}</td>
                     <td>{u.is_active ? 'Active' : 'Inactive'}</td>
                     <td>{new Date(u.createdAt).toLocaleDateString()}</td>
+                    <td>
+                      <button className="delete-btn" onClick={() => handleDeleteUser(u.id)}>Delete</button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -117,7 +135,7 @@ export default function AdminDashboard() {
               />
               <input
                 type="tel"
-                placeholder="Phone Number * (e.g., 9356612017)"
+                placeholder="Phone Number *"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 required
@@ -129,9 +147,7 @@ export default function AdminDashboard() {
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
               <div className="modal-actions">
-                <button type="submit" disabled={loading}>
-                  {loading ? 'Creating...' : 'Create User'}
-                </button>
+                <button type="submit" disabled={loading}>{loading ? 'Creating...' : 'Create'}</button>
                 <button type="button" onClick={() => setShowModal(false)}>Cancel</button>
               </div>
             </form>
@@ -152,12 +168,13 @@ export default function AdminDashboard() {
         .user-table { width: 100%; border-collapse: collapse; }
         .user-table th, .user-table td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #eee; }
         .user-table th { background: #f8f9fa; font-weight: 600; }
+        .delete-btn { background: #ef4444; color: white; border: none; padding: 0.25rem 0.75rem; border-radius: 4px; cursor: pointer; }
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
         .modal-content { background: white; border-radius: 16px; padding: 2rem; width: 90%; max-width: 400px; }
         .modal-content input { width: 100%; padding: 0.75rem; margin-bottom: 1rem; border: 1px solid #ddd; border-radius: 8px; }
         .modal-actions { display: flex; gap: 1rem; justify-content: flex-end; }
         .modal-actions button { padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; }
-        .modal-actions button[type="submit"] { background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; }
+        .modal-actions button[type="submit"] { background: #667eea; color: white; border: none; }
         .modal-actions button[type="button"] { background: #ef4444; color: white; border: none; }
       `}</style>
     </div>

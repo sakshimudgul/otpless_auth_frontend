@@ -2,43 +2,74 @@ import api from './api';
 
 // Admin Login
 export const adminLogin = async (data) => {
-  const response = await api.post('/auth/admin-login', data);
-  return response.data;
+  try {
+    const response = await api.post('/auth/admin-login', data);
+    return response.data;
+  } catch (error) {
+    console.error('Admin login API error:', error);
+    throw error;
+  }
 };
 
-// User Send OTP (SMS)
+// SMS OTP
 export const sendUserOtp = async (data) => {
-  // This endpoint exists in your backend
-  const response = await api.post('/auth/send-otp', data);
-  return response.data;
+  try {
+    const response = await api.post('/auth/send-otp', data);
+    return response.data;
+  } catch (error) {
+    console.error('Send SMS OTP error:', error);
+    throw error;
+  }
 };
 
-// User Verify OTP (SMS)
 export const verifyUserOtp = async (data) => {
-  const response = await api.post('/auth/verify-otp', data);
-  return response.data;
+  try {
+    const response = await api.post('/auth/verify-otp', data);
+    return response.data;
+  } catch (error) {
+    console.error('Verify SMS OTP error:', error);
+    throw error;
+  }
 };
 
-// WhatsApp Send OTP
+// WhatsApp OTP
 export const sendWhatsAppOtp = async (data) => {
-  const response = await api.post('/whatsapp/send', data);
-  return response.data;
+  try {
+    const response = await api.post('/whatsapp/send', data);
+    return response.data;
+  } catch (error) {
+    console.error('Send WhatsApp OTP error:', error);
+    throw error;
+  }
 };
 
-// WhatsApp Verify OTP
 export const verifyWhatsAppOtp = async (data) => {
-  const response = await api.post('/whatsapp/verify', data);
-  return response.data;
+  try {
+    const response = await api.post('/whatsapp/verify', data);
+    return response.data;
+  } catch (error) {
+    console.error('Verify WhatsApp OTP error:', error);
+    throw error;
+  }
 };
 
 // Logout
 export const logout = async () => {
-  const response = await api.post('/auth/logout');
-  return response.data;
+  try {
+    const response = await api.post('/auth/logout');
+    return response.data;
+  } catch (error) {
+    console.error('Logout error:', error);
+    throw error;
+  }
 };
 
-// Get current user
 export const getMe = async () => {
-  const response = await api.get('/auth/me');
-  return response.data;
+  try {
+    const response = await api.get('/auth/me');
+    return response.data;
+  } catch (error) {
+    console.error('Get me error:', error);
+    throw error;
+  }
 };
