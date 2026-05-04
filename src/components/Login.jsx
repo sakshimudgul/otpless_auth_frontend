@@ -46,6 +46,7 @@ export default function Login() {
         await sendWhatsAppOtp({ phone, name: 'User' });
       }
       setIdentifier(phone);
+      // Pass method to verify page
       navigate('/verify', { state: { method } });
     } catch (error) {
       alert(error.response?.data?.error || 'Failed to send OTP');

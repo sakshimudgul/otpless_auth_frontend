@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { verifyUserOtp } from '../../services/authService';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { verifyUserOtp, verifyWhatsAppOtp } from '../../services/authService';
 import { useAuthStore } from '../../store/authStore';
 
 export default function UserVerify() {
@@ -9,7 +9,11 @@ export default function UserVerify() {
   const [timeLeft, setTimeLeft] = useState(300);
   const inputRefs = useRef([]);
   const navigate = useNavigate();
+  const location = useLocation();
   const { identifier, setToken, setUser, setUserRole } = useAuthStore();
+  
+  // Get the method from navigation state (default to 'sms')
+  const method = location.state?.method || 'sms';
 
   useEffect(() => {
     inputRefs.current[0]?.focus();
@@ -40,12 +44,26 @@ export default function UserVerify() {
     if (otpCode.length !== 6) return;
     setLoading(true);
     try {
-      const res = await verifyUserOtp({ phone: identifier, otp: otpCode });
-      setToken(res.token);
-      setUser(res.user);
-      setUserRole('user');
-      navigate('/dashboard');
+      let res;
+      // Use the correct verify endpoint based on method
+      if (method === 'sms') {
+        res = await verifyUserOtp({ phone: identifier, otp: otpCode });
+      } else {
+        res = await verifyWhatsAppOtp({ phone: identifier, otp: otpCode });
+      }
+      
+      if (res.success && res.token) {
+        setToken(res.token);
+        setUser(res.user);
+        setUserRole('user');
+        navigate('/dashboard');
+      } else {
+        alert(res.message || 'Invalid OTP');
+        setOtp(['', '', '', '', '', '']);
+        inputRefs.current[0]?.focus();
+      }
     } catch (error) {
+      console.error('Verification error:', error);
       alert(error.response?.data?.error || 'Invalid OTP');
       setOtp(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
@@ -57,9 +75,11 @@ export default function UserVerify() {
   return (
     <div className="verify-container">
       <div className="verify-card">
-        <div className="icon">🔐</div>
-        <h2>Verify OTP</h2>
-        <p>Enter the 6-digit code sent to <strong>{identifier}</strong></p>
+        <div className="icon">
+          {method === 'sms' ? '📱' : '💚'}
+        </div>
+        <h2>Verify {method.toUpperCase()} OTP</h2>
+        <p>Enter the 6-digit code sent to <strong>{identifier}</strong> via {method.toUpperCase()}</p>
         <div className="otp-group">
           {otp.map((digit, index) => (
             <input
@@ -107,12 +127,14 @@ export default function UserVerify() {
           font-weight: 600; border: 2px solid #e0e0e0; border-radius: 12px;
           transition: all 0.3s;
         }
-        .otp-group input:focus { border-color: #667eea; outline: none; }
+        .otp-group input:focus { border-color: #667eea; outline: none; transform: translateY(-2px); }
         button {
           width: 100%; padding: 1rem; background: linear-gradient(135deg, #667eea, #764ba2);
           color: white; border: none; border-radius: 12px; font-size: 1rem;
           font-weight: 600; cursor: pointer;
+          transition: all 0.3s;
         }
+        button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(102,126,234,0.4); }
         button:disabled { opacity: 0.6; cursor: not-allowed; }
         .timer { margin-top: 1rem; font-size: 0.85rem; color: #999; }
       `}</style>
