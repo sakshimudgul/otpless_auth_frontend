@@ -1,23 +1,35 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { adminLogin, sendUserOtp, sendWhatsAppOtp } from '../services/authService';
-import { useAuthStore } from '../store/authStore';
-import { 
-  FiMail, FiLock, FiSmartphone, FiSend, FiUser, 
-  FiShield, FiZap, FiGlobe, FiCheckCircle, FiMessageCircle 
-} from 'react-icons/fi';
-import { FaWhatsapp } from 'react-icons/fa';
-import { MdSms, MdAdminPanelSettings } from 'react-icons/md';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  adminLogin,
+  sendUserOtp,
+  sendWhatsAppOtp,
+  sendEmailOtp,
+} from "../services/authService";
+import { useAuthStore } from "../store/authStore";
+import {
+  FiMail,
+  FiLock,
+  FiSmartphone,
+  FiSend,
+  FiUser,
+  FiShield,
+  FiZap,
+  FiGlobe,
+  FiCheckCircle,
+} from "react-icons/fi";
+import { FaWhatsapp } from "react-icons/fa";
+import { MdSms, MdAdminPanelSettings } from "react-icons/md";
 
 export default function Login() {
   const [isAdmin, setIsAdmin] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [phone, setPhone] = useState('');
-  const [method, setMethod] = useState('sms');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [identifier, setIdentifier] = useState(""); // Single state for all user inputs
+  const [method, setMethod] = useState("sms");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { setToken, setUser, setUserRole, setIdentifier } = useAuthStore();
+  const { setToken, setUser, setUserRole, setIdentifier: setStoreIdentifier } = useAuthStore();
 
   const handleAdminLogin = async (e) => {
     e.preventDefault();
@@ -26,10 +38,10 @@ export default function Login() {
       const res = await adminLogin({ email, password });
       setToken(res.token);
       setUser(res.user);
-      setUserRole('admin');
-      navigate('/admin/dashboard');
+      setUserRole("admin");
+      navigate("/admin/dashboard");
     } catch (error) {
-      alert(error.response?.data?.error || 'Admin login failed');
+      alert(error.response?.data?.error || "Admin login failed");
     } finally {
       setLoading(false);
     }
@@ -37,29 +49,61 @@ export default function Login() {
 
   const handleUserOtp = async (e) => {
     e.preventDefault();
-    if (!phone) return;
     setLoading(true);
     try {
-      if (method === 'sms') {
-        await sendUserOtp({ phone, name: 'User' });
-      } else {
-        await sendWhatsAppOtp({ phone, name: 'User' });
+      if (!identifier) {
+        alert("Please enter your " + (method === "email" ? "email address" : "phone number"));
+        setLoading(false);
+        return;
       }
-      setIdentifier(phone);
-      // Pass method to verify page
-      navigate('/verify', { state: { method } });
+      
+      if (method === "sms") {
+        await sendUserOtp({ phone: identifier, name: "User" });
+      } else if (method === "whatsapp") {
+        await sendWhatsAppOtp({ phone: identifier, name: "User" });
+      } else if (method === "email") {
+        await sendEmailOtp({ email: identifier, name: "User" });
+      }
+      
+      setStoreIdentifier(identifier);
+      navigate("/verify", { state: { method, identifier } });
     } catch (error) {
-      alert(error.response?.data?.error || 'Failed to send OTP');
+      console.error("OTP send error:", error);
+      alert(error.response?.data?.error || "Failed to send OTP");
     } finally {
       setLoading(false);
     }
   };
 
+  // Get input props based on selected method
+  const getInputProps = () => {
+    if (method === "email") {
+      return {
+        type: "email",
+        placeholder: "Enter your email address",
+        label: "Email Address",
+        icon: <FiMail className="field-icon" />,
+        value: identifier,
+        onChange: (e) => setIdentifier(e.target.value)
+      };
+    } else {
+      return {
+        type: "tel",
+        placeholder: "Enter your phone number",
+        label: "Phone Number",
+        icon: <FiSmartphone className="field-icon" />,
+        value: identifier,
+        onChange: (e) => setIdentifier(e.target.value)
+      };
+    }
+  };
+
+  const inputProps = getInputProps();
+
   return (
     <div className="login-root">
       <div className="login-backdrop"></div>
       <div className="login-grid">
-        
         {/* Left Side - Brand Story */}
         <div className="login-brand">
           <div className="brand-content">
@@ -68,12 +112,12 @@ export default function Login() {
               <span>Secure Login</span>
             </div>
             <h1 className="brand-title">
-              Welcome to<br />
+              Welcome to
+              <br />
               <span>OTPless</span> Auth
             </h1>
             <p className="brand-desc">
-              Experience passwordless authentication with SMS or WhatsApp. 
-              Fast, secure, and hassle-free.
+              Experience passwordless authentication with SMS, WhatsApp, or Email. Fast, secure, and hassle-free.
             </p>
             <div className="brand-stats">
               <div className="stat">
@@ -100,14 +144,16 @@ export default function Login() {
           <div className="login-form-card">
             {/* Toggle Switch */}
             <div className="form-toggle">
-              <button 
-                className={`toggle-option ${!isAdmin ? 'active' : ''}`}
+              <button
+                type="button"
+                className={`toggle-option ${!isAdmin ? "active" : ""}`}
                 onClick={() => setIsAdmin(false)}
               >
                 <FiUser size={16} /> User
               </button>
-              <button 
-                className={`toggle-option ${isAdmin ? 'active' : ''}`}
+              <button
+                type="button"
+                className={`toggle-option ${isAdmin ? "active" : ""}`}
                 onClick={() => setIsAdmin(true)}
               >
                 <MdAdminPanelSettings size={16} /> Admin
@@ -119,42 +165,61 @@ export default function Login() {
               <form className="login-form" onSubmit={handleUserOtp}>
                 <div className="form-header">
                   <h2>Hey there! 👋</h2>
-                  <p>Enter your number to get started</p>
+                  <p>Enter your details to get started</p>
                 </div>
 
+                {/* Single input field - changes based on method */}
                 <div className="input-field">
                   <input
-                    type="tel"
-                    id="phone"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    type={inputProps.type}
+                    id="identifier"
+                    value={inputProps.value}
+                    onChange={inputProps.onChange}
                     required
                     placeholder=" "
                   />
-                  <label htmlFor="phone">Phone Number</label>
-                  <FiSmartphone className="field-icon" />
+                  <label htmlFor="identifier">{inputProps.label}</label>
+                  {inputProps.icon}
                 </div>
 
                 <div className="method-selector">
                   <label>Choose delivery method</label>
                   <div className="method-cards">
-                    <div 
-                      className={`method-card ${method === 'sms' ? 'selected' : ''}`}
-                      onClick={() => setMethod('sms')}
+                    <div
+                      className={`method-card ${method === "sms" ? "selected" : ""}`}
+                      onClick={() => {
+                        setMethod("sms");
+                        setIdentifier(""); // Clear input when switching methods
+                      }}
                     >
                       <MdSms className="method-icon" />
                       <span className="method-name">SMS</span>
                       <span className="method-note">Text message</span>
-                      {method === 'sms' && <FiCheckCircle className="check-icon" />}
+                      {method === "sms" && <FiCheckCircle className="check-icon" />}
                     </div>
-                    <div 
-                      className={`method-card ${method === 'whatsapp' ? 'selected' : ''}`}
-                      onClick={() => setMethod('whatsapp')}
+                    <div
+                      className={`method-card ${method === "whatsapp" ? "selected" : ""}`}
+                      onClick={() => {
+                        setMethod("whatsapp");
+                        setIdentifier("");
+                      }}
                     >
                       <FaWhatsapp className="method-icon" />
                       <span className="method-name">WhatsApp</span>
                       <span className="method-note">Instant delivery</span>
-                      {method === 'whatsapp' && <FiCheckCircle className="check-icon" />}
+                      {method === "whatsapp" && <FiCheckCircle className="check-icon" />}
+                    </div>
+                    <div
+                      className={`method-card ${method === "email" ? "selected" : ""}`}
+                      onClick={() => {
+                        setMethod("email");
+                        setIdentifier("");
+                      }}
+                    >
+                      <FiMail className="method-icon" />
+                      <span className="method-name">Email</span>
+                      <span className="method-note">Check your inbox</span>
+                      {method === "email" && <FiCheckCircle className="check-icon" />}
                     </div>
                   </div>
                 </div>
@@ -218,7 +283,7 @@ export default function Login() {
             <div className="form-footer">
               <p className="demo-note">
                 {!isAdmin ? (
-                  <>✨ No password needed. Just your phone number.</>
+                  <>✨ No password needed. Just your phone number or email.</>
                 ) : (
                   <>🔐 Demo: admin@otpless.com / Admin@123</>
                 )}
@@ -314,6 +379,7 @@ export default function Login() {
           background: linear-gradient(135deg, #a78bfa, #c084fc);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
+          background-clip: text;
         }
 
         .brand-desc {
@@ -564,7 +630,7 @@ export default function Login() {
         }
 
         .submit-btn:disabled {
-          opacity: 0.7;
+          opacity: 0.6;
           cursor: not-allowed;
         }
 

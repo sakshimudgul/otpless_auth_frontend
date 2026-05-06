@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { verifyUserOtp, verifyWhatsAppOtp } from '../../services/authService';
+import { verifyUserOtp, verifyWhatsAppOtp, verifyEmailOtp } from '../../services/authService';
 import { useAuthStore } from '../../store/authStore';
 
 export default function UserVerify() {
@@ -11,8 +11,6 @@ export default function UserVerify() {
   const navigate = useNavigate();
   const location = useLocation();
   const { identifier, setToken, setUser, setUserRole } = useAuthStore();
-  
-  // Get the method from navigation state (default to 'sms')
   const method = location.state?.method || 'sms';
 
   useEffect(() => {
@@ -45,11 +43,12 @@ export default function UserVerify() {
     setLoading(true);
     try {
       let res;
-      // Use the correct verify endpoint based on method
       if (method === 'sms') {
         res = await verifyUserOtp({ phone: identifier, otp: otpCode });
-      } else {
+      } else if (method === 'whatsapp') {
         res = await verifyWhatsAppOtp({ phone: identifier, otp: otpCode });
+      } else {
+        res = await verifyEmailOtp({ email: identifier, otp: otpCode });
       }
       
       if (res.success && res.token) {
@@ -63,7 +62,6 @@ export default function UserVerify() {
         inputRefs.current[0]?.focus();
       }
     } catch (error) {
-      console.error('Verification error:', error);
       alert(error.response?.data?.error || 'Invalid OTP');
       setOtp(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
@@ -76,7 +74,9 @@ export default function UserVerify() {
     <div className="verify-container">
       <div className="verify-card">
         <div className="icon">
-          {method === 'sms' ? '📱' : '💚'}
+          {method === 'sms' && '📱'}
+          {method === 'whatsapp' && '💚'}
+          {method === 'email' && '📧'}
         </div>
         <h2>Verify {method.toUpperCase()} OTP</h2>
         <p>Enter the 6-digit code sent to <strong>{identifier}</strong> via {method.toUpperCase()}</p>
