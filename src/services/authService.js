@@ -39,9 +39,18 @@ export const verifyEmailOtp = async (data) => {
   return response.data;
 };
 
+// Logout - Don't send token, just clear local storage
 export const logout = async () => {
-  const response = await api.post('/auth/logout');
-  return response.data;
+  try {
+    // Try to call logout endpoint (optional)
+    await api.post('/auth/logout');
+  } catch (error) {
+    // Ignore error - just clear local storage
+    console.log('Logout API call failed, clearing local storage');
+  }
+  // Always clear local storage regardless of API response
+  localStorage.removeItem('auth-storage');
+  sessionStorage.clear();
 };
 
 export const getMe = async () => {

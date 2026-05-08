@@ -13,17 +13,27 @@ export default function UserDashboard() {
   const { user, logout: clearStore } = useAuthStore();
   const navigate = useNavigate();
 
-  const handleLogout = async () => {
+ const handleLogout = async () => {
+  try {
+    // Clear token from store first
+    clearStore();
+    
+    // Try to call logout API (optional)
     try {
-      await logoutService();
-      clearStore();
-      navigate('/');
-    } catch (error) {
-      console.error('Logout failed:', error);
-      clearStore();
-      navigate('/');
+      await logout();
+    } catch (e) {
+      // Ignore API errors
     }
-  };
+    
+    // Navigate to login
+    navigate('/');
+  } catch (error) {
+    console.error('Logout failed:', error);
+    // Force logout even if error
+    clearStore();
+    navigate('/');
+  }
+};
 
   const loginTime = new Date().toLocaleTimeString();
   const loginDate = new Date().toLocaleDateString('en-US', {
