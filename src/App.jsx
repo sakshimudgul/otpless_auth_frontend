@@ -3,6 +3,7 @@ import { useAuthStore } from './store/authStore';
 import Login from './components/Login';
 import UserVerify from './components/User/Verify';
 import AdminDashboard from './components/Admin/Dashboard';
+import Users from './components/Admin/Users';
 import UserDashboard from './components/User/Dashboard';
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
         <Route path="/" element={<Login />} />
         <Route path="/verify" element={<UserVerify />} />
         <Route path="/admin/dashboard" element={token && userRole === 'admin' ? <AdminDashboard /> : <Navigate to="/" />} />
+        <Route path="/admin/users" element={token && userRole === 'admin' ? <Users /> : <Navigate to="/" />} />
         <Route path="/dashboard" element={token && userRole === 'user' ? <UserDashboard /> : <Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
