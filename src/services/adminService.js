@@ -1,37 +1,79 @@
 import api from './api';
 
-// Get all users (Admin only)
-export const getAllUsers = async () => {
-  const response = await api.get('/admin/users');
+// Admin Login
+export const adminLogin = async (data) => {
+  const response = await api.post('/auth/admin-login', data);
+  // Store both tokens
+  if (response.data.accessToken) {
+    localStorage.setItem('accessToken', response.data.accessToken);
+    localStorage.setItem('refreshToken', response.data.refreshToken);
+  }
   return response.data;
 };
 
-// Get users created by this admin
-export const getMyUsers = async () => {
-  const response = await api.get('/admin/my-users');
+// User OTP Login
+export const sendUserOtp = async (data) => {
+  const response = await api.post('/auth/send-otp', data);
   return response.data;
 };
 
-// Create user
-export const createUser = async (data) => {
-  const response = await api.post('/admin/users', data);
+export const verifyUserOtp = async (data) => {
+  const response = await api.post('/auth/verify-otp', data);
+  // Store both tokens
+  if (response.data.accessToken) {
+    localStorage.setItem('accessToken', response.data.accessToken);
+    localStorage.setItem('refreshToken', response.data.refreshToken);
+  }
   return response.data;
 };
 
-// Update user
-export const updateUser = async (id, data) => {
-  const response = await api.put(`/admin/users/${id}`, data);
+// Refresh Token
+export const refreshAccessToken = async () => {
+  const refreshToken = localStorage.getItem('refreshToken');
+  if (!refreshToken) {
+    throw new Error('No refresh token available');
+  }
+  
+  const response = await api.post('/auth/refresh-token', { refreshToken });
+  if (response.data.accessToken) {
+    localStorage.setItem('accessToken', response.data.accessToken);
+  }
   return response.data;
 };
 
-// Delete user
-export const deleteUser = async (id) => {
-  const response = await api.delete(`/admin/users/${id}`);
+// Logout
+export const logout = async () => {
+  const refreshToken = localStorage.getItem('refreshToken');
+  try {
+    if (refreshToken) {
+      await api.post('/auth/logout', { refreshToken });
+    }
+  } catch (error) {
+    console.error('Logout error:', error);
+  } finally {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('auth-storage');
+  }
+};
+
+// Logout from all devices
+export const logoutAllDevices = async () => {
+  const response = await api.post('/auth/logout-all');
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('auth-storage');
   return response.data;
 };
 
-// Get user by ID
-export const getUserById = async (id) => {
-  const response = await api.get(`/admin/users/${id}`);
+// Get current user
+export const getMe = async () => {
+  const response = await api.get('/auth/me');
+  return response.data;
+};
+
+// Get token info
+export const getTokenInfo = async () => {
+  const response = await api.get('/auth/token-info');
   return response.data;
 };

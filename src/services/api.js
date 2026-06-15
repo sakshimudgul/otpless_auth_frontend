@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { useAuthStore } from '../store/authStore';
 
 const API_URL = 'http://localhost:5000/api';
 
@@ -8,13 +7,14 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: false,
+  withCredentials: true, // ADD THIS - Important for cookies
 });
 
-// Request interceptor to add token
+// Request interceptor
 api.interceptors.request.use(
   (config) => {
-    const token = useAuthStore.getState().token;
+    // You can keep your existing token logic
+    const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -35,6 +35,14 @@ api.interceptors.response.use(
   },
   (error) => {
     console.error('Response error:', error.response?.status, error.response?.data);
+    if (error.response?.status === 401) {
+      // Clear both localStorage and cookie will be cleared by backend
+      localStorage.removeItem('token');
+      localStorage.removeItem('auth-storage');
+      if (window.location.pathname !== '/') {
+        window.location.href = '/';
+      }
+    }
     return Promise.reject(error);
   }
 );

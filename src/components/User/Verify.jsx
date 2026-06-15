@@ -2,18 +2,25 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { verifyUserOtp, verifyWhatsAppOtp, verifyEmailOtp } from '../../services/authService';
 import { useAuthStore } from '../../store/authStore';
+import { FiSend, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 
 export default function UserVerify() {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(300);
+  const [error, setError] = useState('');
   const inputRefs = useRef([]);
   const navigate = useNavigate();
   const location = useLocation();
-  const { identifier, setToken, setUser, setUserRole } = useAuthStore();
+  const { setToken, setUser, setUserRole } = useAuthStore();
+  const identifier = location.state?.identifier;
   const method = location.state?.method || 'sms';
 
   useEffect(() => {
+    if (!identifier) {
+      navigate('/');
+      return;
+    }
     inputRefs.current[0]?.focus();
   }, []);
 
@@ -34,35 +41,70 @@ export default function UserVerify() {
     const newOtp = [...otp];
     newOtp[index] = value.slice(-1);
     setOtp(newOtp);
-    if (value && index < 5) inputRefs.current[index + 1]?.focus();
+    setError('');
+    if (value && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
   };
 
   const handleVerify = async () => {
     const otpCode = otp.join('');
-    if (otpCode.length !== 6) return;
+    if (otpCode.length !== 6) {
+      setError('Please enter complete 6-digit OTP');
+      return;
+    }
+    
     setLoading(true);
+    setError('');
+    
     try {
-      let res;
+      let response;
+      
+      // Call appropriate verification API based on method
       if (method === 'sms') {
-        res = await verifyUserOtp({ phone: identifier, otp: otpCode });
+        response = await verifyUserOtp({ 
+          phone: identifier, 
+          otp: otpCode,
+          name: 'User'
+        });
       } else if (method === 'whatsapp') {
-        res = await verifyWhatsAppOtp({ phone: identifier, otp: otpCode });
+        response = await verifyWhatsAppOtp({ 
+          phone: identifier, 
+          otp: otpCode,
+          name: 'User'
+        });
       } else {
-        res = await verifyEmailOtp({ email: identifier, otp: otpCode });
+        response = await verifyEmailOtp({ 
+          email: identifier, 
+          otp: otpCode,
+          name: 'User'
+        });
       }
       
-      if (res.success && res.token) {
-        setToken(res.token);
-        setUser(res.user);
+      console.log('Verification response:', response);
+      
+      // Check for success (handle both 'token' and 'accessToken' formats)
+      if (response.success && (response.accessToken || response.token)) {
+        const token = response.accessToken || response.token;
+        setToken(token);
+        setUser(response.user);
         setUserRole('user');
         navigate('/dashboard');
       } else {
-        alert(res.message || 'Invalid OTP');
+        setError(response.message || response.error || 'Invalid OTP. Please try again.');
         setOtp(['', '', '', '', '', '']);
         inputRefs.current[0]?.focus();
       }
     } catch (error) {
-      alert(error.response?.data?.error || 'Invalid OTP');
+      console.error('Verification error:', error);
+      const errorMsg = error.response?.data?.error || error.response?.data?.message || 'Invalid OTP. Please try again.';
+      setError(errorMsg);
       setOtp(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
     } finally {
@@ -70,17 +112,43 @@ export default function UserVerify() {
     }
   };
 
+  const getMethodIcon = () => {
+    switch(method) {
+      case 'sms': return '📱';
+      case 'whatsapp': return '💚';
+      case 'email': return '📧';
+      default: return '🔐';
+    }
+  };
+
+  const getMethodColor = () => {
+    switch(method) {
+      case 'sms': return 'from-purple-500 to-purple-600';
+      case 'whatsapp': return 'from-green-500 to-green-600';
+      case 'email': return 'from-blue-500 to-blue-600';
+      default: return 'from-indigo-500 to-purple-600';
+    }
+  };
+
   return (
-    <div className="verify-container">
-      <div className="verify-card">
-        <div className="icon">
-          {method === 'sms' && '📱'}
-          {method === 'whatsapp' && '💚'}
-          {method === 'email' && '📧'}
+    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-purple-800 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl">
+        <div className="text-center mb-6">
+          <div className="text-5xl mb-4">{getMethodIcon()}</div>
+          <h2 className="text-2xl font-bold text-gray-800">Verify {method.toUpperCase()} OTP</h2>
+          <p className="text-gray-500 text-sm mt-2">
+            Enter the 6-digit code sent to <strong className="text-purple-600">{identifier}</strong>
+          </p>
         </div>
-        <h2>Verify {method.toUpperCase()} OTP</h2>
-        <p>Enter the 6-digit code sent to <strong>{identifier}</strong> via {method.toUpperCase()}</p>
-        <div className="otp-group">
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-600 text-sm">
+            <FiAlertCircle />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <div className="flex justify-center gap-3 mb-8">
           {otp.map((digit, index) => (
             <input
               key={index}
@@ -89,55 +157,33 @@ export default function UserVerify() {
               maxLength="1"
               value={digit}
               onChange={(e) => handleChange(index, e.target.value)}
+              onKeyDown={(e) => handleKeyDown(index, e)}
               disabled={loading}
+              className="w-14 h-16 text-center text-2xl font-bold border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none transition-all disabled:opacity-50"
             />
           ))}
         </div>
-        <button onClick={handleVerify} disabled={loading || otp.join('').length !== 6}>
-          {loading ? 'Verifying...' : 'Verify & Login'}
-        </button>
-        <p className="timer">Resend code in {formatTime(timeLeft)}</p>
-      </div>
 
-      <style>{`
-        .verify-container {
-          min-height: 100vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          font-family: 'Inter', sans-serif;
-          padding: 1rem;
-        }
-        .verify-card {
-          max-width: 450px;
-          width: 100%;
-          background: white;
-          border-radius: 24px;
-          padding: 2rem;
-          text-align: center;
-          box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-        }
-        .icon { font-size: 3rem; margin-bottom: 1rem; }
-        h2 { margin-bottom: 0.5rem; color: #1a1a2e; }
-        p { color: #666; margin-bottom: 2rem; }
-        .otp-group { display: flex; justify-content: center; gap: 0.75rem; margin-bottom: 2rem; }
-        .otp-group input {
-          width: 55px; height: 65px; text-align: center; font-size: 1.5rem;
-          font-weight: 600; border: 2px solid #e0e0e0; border-radius: 12px;
-          transition: all 0.3s;
-        }
-        .otp-group input:focus { border-color: #667eea; outline: none; transform: translateY(-2px); }
-        button {
-          width: 100%; padding: 1rem; background: linear-gradient(135deg, #667eea, #764ba2);
-          color: white; border: none; border-radius: 12px; font-size: 1rem;
-          font-weight: 600; cursor: pointer;
-          transition: all 0.3s;
-        }
-        button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(102,126,234,0.4); }
-        button:disabled { opacity: 0.6; cursor: not-allowed; }
-        .timer { margin-top: 1rem; font-size: 0.85rem; color: #999; }
-      `}</style>
+        <button
+          onClick={handleVerify}
+          disabled={loading || otp.join('').length !== 6}
+          className={`w-full py-3 bg-gradient-to-r ${getMethodColor()} text-white font-semibold rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl`}
+        >
+          {loading ? (
+            <span className="flex items-center justify-center gap-2">
+              <FiSend className="animate-spin" /> Verifying...
+            </span>
+          ) : (
+            <span>Verify & Login →</span>
+          )}
+        </button>
+
+        <div className="text-center mt-6">
+          <p className="text-sm text-gray-400">
+            Resend code in <span className="font-semibold text-purple-600">{formatTime(timeLeft)}</span>
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

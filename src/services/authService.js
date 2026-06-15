@@ -1,59 +1,127 @@
 import api from './api';
 
-// Admin Login
+// ==================== ADMIN LOGIN ====================
 export const adminLogin = async (data) => {
+  console.log('📤 Admin login request:', data.email);
   const response = await api.post('/auth/admin-login', data);
+  console.log('📥 Admin login response:', response.data);
+  
+  if (response.data.token) {
+    localStorage.setItem('token', response.data.token);
+  }
   return response.data;
 };
 
-// SMS OTP
+// ==================== SMS OTP ====================
 export const sendUserOtp = async (data) => {
+  console.log('📤 Send SMS OTP to:', data.phone);
   const response = await api.post('/auth/send-otp', data);
+  console.log('📥 Send SMS OTP response:', response.data);
   return response.data;
 };
 
 export const verifyUserOtp = async (data) => {
-  const response = await api.post('/auth/verify-otp', data);
+  console.log('📤 Verify SMS OTP for:', data.phone);
+  const response = await api.post('/auth/verify-otp', {
+    phone: data.phone,
+    otp: data.otp,
+    name: data.name
+  });
+  console.log('📥 Verify SMS OTP response:', response.data);
+  
+  if (response.data.token) {
+    localStorage.setItem('token', response.data.token);
+  }
   return response.data;
 };
 
-// WhatsApp OTP
+// ==================== WHATSAPP OTP ====================
 export const sendWhatsAppOtp = async (data) => {
-  const response = await api.post('/whatsapp/send', data);
+  console.log('📤 Send WhatsApp OTP to:', data.phone);
+  const response = await api.post('/auth/send-whatsapp', data);
+  console.log('📥 Send WhatsApp OTP response:', response.data);
   return response.data;
 };
 
 export const verifyWhatsAppOtp = async (data) => {
-  const response = await api.post('/whatsapp/verify', data);
+  console.log('📤 Verify WhatsApp OTP for:', data.phone);
+  const response = await api.post('/auth/verify-whatsapp', {
+    phone: data.phone,
+    otp: data.otp,
+    name: data.name
+  });
+  console.log('📥 Verify WhatsApp OTP response:', response.data);
+  
+  if (response.data.token) {
+    localStorage.setItem('token', response.data.token);
+  }
   return response.data;
 };
 
-// Email OTP
+// ==================== EMAIL OTP ====================
 export const sendEmailOtp = async (data) => {
-  const response = await api.post('/email/send', data);
+  console.log('📤 Send Email OTP to:', data.email);
+  const response = await api.post('/auth/send-email', data);
+  console.log('📥 Send Email OTP response:', response.data);
   return response.data;
 };
 
 export const verifyEmailOtp = async (data) => {
-  const response = await api.post('/email/verify', data);
+  console.log('📤 Verify Email OTP for:', data.email);
+  const response = await api.post('/auth/verify-email', {
+    email: data.email,
+    otp: data.otp,
+    name: data.name
+  });
+  console.log('📥 Verify Email OTP response:', response.data);
+  
+  if (response.data.token) {
+    localStorage.setItem('token', response.data.token);
+  }
   return response.data;
 };
 
-// Logout - Don't send token, just clear local storage
+// ==================== LOGOUT ====================
 export const logout = async () => {
+  console.log('📤 Logout request');
   try {
-    // Try to call logout endpoint (optional)
     await api.post('/auth/logout');
   } catch (error) {
-    // Ignore error - just clear local storage
-    console.log('Logout API call failed, clearing local storage');
+    console.error('Logout error:', error);
   }
-  // Always clear local storage regardless of API response
+  localStorage.removeItem('token');
   localStorage.removeItem('auth-storage');
-  sessionStorage.clear();
 };
 
+// ==================== GET CURRENT USER ====================
 export const getMe = async () => {
+  console.log('📤 Get current user request');
   const response = await api.get('/auth/me');
+  console.log('📥 Get current user response:', response.data);
+  return response.data;
+};
+
+// ==================== ADMIN USERS MANAGEMENT ====================
+export const getAllUsers = async () => {
+  console.log('📤 Get all users request');
+  const response = await api.get('/auth/admin/users');
+  return response.data;
+};
+
+export const createUser = async (data) => {
+  console.log('📤 Create user request:', data);
+  const response = await api.post('/auth/admin/users', data);
+  return response.data;
+};
+
+export const updateUser = async (id, data) => {
+  console.log('📤 Update user request:', id, data);
+  const response = await api.put(`/auth/admin/users/${id}`, data);
+  return response.data;
+};
+
+export const deleteUser = async (id) => {
+  console.log('📤 Delete user request:', id);
+  const response = await api.delete(`/auth/admin/users/${id}`);
   return response.data;
 };

@@ -25,7 +25,8 @@ export default function Login() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [identifier, setIdentifier] = useState(""); // Single state for all user inputs
+  const [phoneNumber, setPhoneNumber] = useState(""); // For SMS/WhatsApp
+  const [emailAddress, setEmailAddress] = useState(""); // For Email
   const [method, setMethod] = useState("sms");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -36,11 +37,17 @@ export default function Login() {
     setLoading(true);
     try {
       const res = await adminLogin({ email, password });
-      setToken(res.token);
-      setUser(res.user);
-      setUserRole("admin");
-      navigate("/admin/dashboard");
+      if (res.token) {
+        localStorage.setItem('token', res.token);
+        setToken(res.token);
+        setUser(res.user);
+        setUserRole("admin");
+        navigate("/admin/dashboard");
+      } else {
+        alert("Login failed: No token received");
+      }
     } catch (error) {
+      console.error("Admin login error:", error);
       alert(error.response?.data?.error || "Admin login failed");
     } finally {
       setLoading(false);
@@ -51,20 +58,38 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     try {
-      if (!identifier) {
-        alert("Please enter your " + (method === "email" ? "email address" : "phone number"));
-        setLoading(false);
-        return;
-      }
+      let identifier = "";
       
       if (method === "sms") {
-        await sendUserOtp({ phone: identifier, name: "User" });
+        if (!phoneNumber) {
+          alert("Please enter your phone number");
+          setLoading(false);
+          return;
+        }
+        console.log("Sending SMS OTP to:", phoneNumber);
+        await sendUserOtp({ phone: phoneNumber, name: "User" });
+        identifier = phoneNumber;
       } else if (method === "whatsapp") {
-        await sendWhatsAppOtp({ phone: identifier, name: "User" });
+        if (!phoneNumber) {
+          alert("Please enter your phone number");
+          setLoading(false);
+          return;
+        }
+        console.log("Sending WhatsApp OTP to:", phoneNumber);
+        await sendWhatsAppOtp({ phone: phoneNumber, name: "User" });
+        identifier = phoneNumber;
       } else if (method === "email") {
-        await sendEmailOtp({ email: identifier, name: "User" });
+        if (!emailAddress) {
+          alert("Please enter your email address");
+          setLoading(false);
+          return;
+        }
+        console.log("Sending Email OTP to:", emailAddress);
+        await sendEmailOtp({ email: emailAddress, name: "User" });
+        identifier = emailAddress;
       }
       
+      console.log("OTP sent successfully, identifier:", identifier);
       setStoreIdentifier(identifier);
       navigate("/verify", { state: { method, identifier } });
     } catch (error) {
@@ -75,627 +100,269 @@ export default function Login() {
     }
   };
 
-  // Get input props based on selected method
-  const getInputProps = () => {
-    if (method === "email") {
-      return {
-        type: "email",
-        placeholder: "Enter your email address",
-        label: "Email Address",
-        icon: <FiMail className="field-icon" />,
-        value: identifier,
-        onChange: (e) => setIdentifier(e.target.value)
-      };
-    } else {
-      return {
-        type: "tel",
-        placeholder: "Enter your phone number",
-        label: "Phone Number",
-        icon: <FiSmartphone className="field-icon" />,
-        value: identifier,
-        onChange: (e) => setIdentifier(e.target.value)
-      };
-    }
-  };
-
-  const inputProps = getInputProps();
-
   return (
-    <div className="login-root">
-      <div className="login-backdrop"></div>
-      <div className="login-grid">
-        {/* Left Side - Brand Story */}
-        <div className="login-brand">
-          <div className="brand-content">
-            <div className="brand-badge">
-              <FiShield size={12} />
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="flex flex-col lg:flex-row min-h-screen">
+        {/* Left Side - Brand Section */}
+        <div className="w-full lg:w-1/2 bg-gradient-to-br from-indigo-900 via-purple-900 to-purple-800 text-white flex items-center justify-center p-8 md:p-12 lg:p-16 relative overflow-hidden">
+          <div className="absolute inset-0 opacity-20">
+            <div className="absolute top-20 left-10 w-72 h-72 bg-purple-500 rounded-full blur-3xl"></div>
+            <div className="absolute bottom-20 right-10 w-96 h-96 bg-indigo-600 rounded-full blur-3xl"></div>
+          </div>
+          
+          <div className="relative z-10 max-w-md w-full">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-sm mb-8">
+              <FiShield size={14} />
               <span>Secure Login</span>
             </div>
-            <h1 className="brand-title">
+            
+            <h1 className="text-4xl md:text-5xl font-bold mb-6 leading-tight">
               Welcome to
               <br />
-              <span>OTPless</span> Auth
+              <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                OTPless Auth
+              </span>
             </h1>
-            <p className="brand-desc">
-              Experience passwordless authentication with SMS, WhatsApp, or Email. Fast, secure, and hassle-free.
+            
+            <p className="text-purple-200 mb-10 leading-relaxed text-base">
+              Experience passwordless authentication with SMS, WhatsApp, or Email. 
+              Fast, secure, and hassle-free.
             </p>
-            <div className="brand-stats">
-              <div className="stat">
-                <FiUser className="stat-icon" />
-                <span className="stat-number">2.5k+</span>
-                <span className="stat-label">Happy Users</span>
+            
+            <div className="flex justify-between gap-6 pt-6 border-t border-white/10">
+              <div className="text-center">
+                <FiUser className="text-purple-300 mb-2 mx-auto" size={24} />
+                <div className="text-2xl font-bold">2.5k+</div>
+                <div className="text-sm text-purple-300 mt-1">Happy Users</div>
               </div>
-              <div className="stat">
-                <FiZap className="stat-icon" />
-                <span className="stat-number">99.9%</span>
-                <span className="stat-label">Success Rate</span>
+              <div className="text-center">
+                <FiZap className="text-purple-300 mb-2 mx-auto" size={24} />
+                <div className="text-2xl font-bold">99.9%</div>
+                <div className="text-sm text-purple-300 mt-1">Success Rate</div>
               </div>
-              <div className="stat">
-                <FiGlobe className="stat-icon" />
-                <span className="stat-number">&lt;3s</span>
-                <span className="stat-label">OTP Delivery</span>
+              <div className="text-center">
+                <FiGlobe className="text-purple-300 mb-2 mx-auto" size={24} />
+                <div className="text-2xl font-bold">&lt;3s</div>
+                <div className="text-sm text-purple-300 mt-1">OTP Delivery</div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Right Side - Login Form */}
-        <div className="login-form-wrapper">
-          <div className="login-form-card">
-            {/* Toggle Switch */}
-            <div className="form-toggle">
-              <button
-                type="button"
-                className={`toggle-option ${!isAdmin ? "active" : ""}`}
-                onClick={() => setIsAdmin(false)}
-              >
-                <FiUser size={16} /> User
-              </button>
-              <button
-                type="button"
-                className={`toggle-option ${isAdmin ? "active" : ""}`}
-                onClick={() => setIsAdmin(true)}
-              >
-                <MdAdminPanelSettings size={16} /> Admin
-              </button>
-            </div>
+        <div className="w-full lg:w-1/2 flex items-center justify-center p-6 md:p-10 lg:p-12">
+          <div className="w-full max-w-md">
+            <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
+              
+              {/* Toggle Switch */}
+              <div className="flex gap-2 bg-gray-100 p-1 rounded-full mb-8">
+                <button
+                  type="button"
+                  onClick={() => setIsAdmin(false)}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full transition-all duration-300 ${
+                    !isAdmin 
+                      ? "bg-white text-gray-800 shadow-md" 
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  <FiUser size={18} />
+                  <span className="font-semibold">User</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsAdmin(true)}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full transition-all duration-300 ${
+                    isAdmin 
+                      ? "bg-white text-gray-800 shadow-md" 
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  <MdAdminPanelSettings size={18} />
+                  <span className="font-semibold">Admin</span>
+                </button>
+              </div>
 
-            {!isAdmin ? (
-              // User Login Form
-              <form className="login-form" onSubmit={handleUserOtp}>
-                <div className="form-header">
-                  <h2>Hey there! 👋</h2>
-                  <p>Enter your details to get started</p>
-                </div>
+              {/* Admin Login Form */}
+              {isAdmin ? (
+                <form onSubmit={handleAdminLogin} className="space-y-6">
+                  <div className="text-center mb-8">
+                    <h2 className="text-3xl font-bold text-gray-800">Welcome Back! 🎉</h2>
+                    <p className="text-gray-500 text-sm mt-2">Admin access only</p>
+                  </div>
 
-                {/* Single input field - changes based on method */}
-                <div className="input-field">
-                  <input
-                    type={inputProps.type}
-                    id="identifier"
-                    value={inputProps.value}
-                    onChange={inputProps.onChange}
-                    required
-                    placeholder=" "
-                  />
-                  <label htmlFor="identifier">{inputProps.label}</label>
-                  {inputProps.icon}
-                </div>
+                  <div className="relative">
+                    <input
+                      type="email"
+                      id="admin-email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full px-4 py-3.5 pl-12 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none transition-all duration-300"
+                      placeholder="Enter your email"
+                      required
+                    />
+                    <FiMail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                  </div>
 
-                <div className="method-selector">
-                  <label>Choose delivery method</label>
-                  <div className="method-cards">
-                    <div
-                      className={`method-card ${method === "sms" ? "selected" : ""}`}
-                      onClick={() => {
-                        setMethod("sms");
-                        setIdentifier(""); // Clear input when switching methods
-                      }}
-                    >
-                      <MdSms className="method-icon" />
-                      <span className="method-name">SMS</span>
-                      <span className="method-note">Text message</span>
-                      {method === "sms" && <FiCheckCircle className="check-icon" />}
+                  <div className="relative">
+                    <input
+                      type="password"
+                      id="admin-password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full px-4 py-3.5 pl-12 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none transition-all duration-300"
+                      placeholder="Enter your password"
+                      required
+                    />
+                    <FiLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+                  >
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <FiSend className="animate-spin" /> Logging in...
+                      </span>
+                    ) : (
+                      <span>Login →</span>
+                    )}
+                  </button>
+
+                  <div className="text-center pt-4">
+                    <p className="text-xs text-gray-400 bg-gray-50 inline-block px-5 py-2.5 rounded-full">
+                      🔐 Demo: admin@otpless.com / Admin@123
+                    </p>
+                  </div>
+                </form>
+              ) : (
+                /* User Login Form */
+                <form onSubmit={handleUserOtp} className="space-y-6">
+                  <div className="text-center mb-8">
+                    <h2 className="text-3xl font-bold text-gray-800">Hey There! 👋</h2>
+                    <p className="text-gray-500 text-sm mt-2">Enter your details to get started</p>
+                  </div>
+
+                  {/* Dynamic Input Field based on method */}
+                  {method === "email" ? (
+                    <div className="relative">
+                      <input
+                        type="email"
+                        id="user-email"
+                        value={emailAddress}
+                        onChange={(e) => setEmailAddress(e.target.value)}
+                        className="w-full px-4 py-3.5 pl-12 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none transition-all duration-300"
+                        placeholder="Enter your email address"
+                        required
+                      />
+                      <FiMail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                     </div>
-                    <div
-                      className={`method-card ${method === "whatsapp" ? "selected" : ""}`}
-                      onClick={() => {
-                        setMethod("whatsapp");
-                        setIdentifier("");
-                      }}
-                    >
-                      <FaWhatsapp className="method-icon" />
-                      <span className="method-name">WhatsApp</span>
-                      <span className="method-note">Instant delivery</span>
-                      {method === "whatsapp" && <FiCheckCircle className="check-icon" />}
+                  ) : (
+                    <div className="relative">
+                      <input
+                        type="tel"
+                        id="user-phone"
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value)}
+                        className="w-full px-4 py-3.5 pl-12 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none transition-all duration-300"
+                        placeholder="Enter your phone number"
+                        required
+                      />
+                      <FiSmartphone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                     </div>
-                    <div
-                      className={`method-card ${method === "email" ? "selected" : ""}`}
-                      onClick={() => {
-                        setMethod("email");
-                        setIdentifier("");
-                      }}
-                    >
-                      <FiMail className="method-icon" />
-                      <span className="method-name">Email</span>
-                      <span className="method-note">Check your inbox</span>
-                      {method === "email" && <FiCheckCircle className="check-icon" />}
+                  )}
+
+                  {/* Delivery Method Selector */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      Choose Delivery Method
+                    </label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {/* SMS Option */}
+                      <div
+                        onClick={() => {
+                          setMethod("sms");
+                          setPhoneNumber("");
+                          setEmailAddress("");
+                        }}
+                        className={`cursor-pointer rounded-xl p-4 text-center border-2 transition-all duration-300 relative ${
+                          method === "sms" 
+                            ? "border-purple-500 bg-purple-50" 
+                            : "border-gray-200 hover:border-purple-300"
+                        }`}
+                      >
+                        <MdSms className={`mx-auto mb-2 text-2xl ${method === "sms" ? "text-purple-600" : "text-gray-500"}`} />
+                        <span className={`text-sm font-semibold block ${method === "sms" ? "text-purple-700" : "text-gray-700"}`}>SMS</span>
+                        <p className="text-xs text-gray-400 mt-1">Text message</p>
+                        {method === "sms" && <FiCheckCircle className="absolute top-2 right-2 text-purple-500" size={14} />}
+                      </div>
+
+                      {/* WhatsApp Option */}
+                      <div
+                        onClick={() => {
+                          setMethod("whatsapp");
+                          setPhoneNumber("");
+                          setEmailAddress("");
+                        }}
+                        className={`cursor-pointer rounded-xl p-4 text-center border-2 transition-all duration-300 relative ${
+                          method === "whatsapp" 
+                            ? "border-green-500 bg-green-50" 
+                            : "border-gray-200 hover:border-green-300"
+                        }`}
+                      >
+                        <FaWhatsapp className={`mx-auto mb-2 text-2xl ${method === "whatsapp" ? "text-green-600" : "text-gray-500"}`} />
+                        <span className={`text-sm font-semibold block ${method === "whatsapp" ? "text-green-700" : "text-gray-700"}`}>WhatsApp</span>
+                        <p className="text-xs text-gray-400 mt-1">Instant delivery</p>
+                        {method === "whatsapp" && <FiCheckCircle className="absolute top-2 right-2 text-green-500" size={14} />}
+                      </div>
+
+                      {/* Email Option */}
+                      <div
+                        onClick={() => {
+                          setMethod("email");
+                          setPhoneNumber("");
+                          setEmailAddress("");
+                        }}
+                        className={`cursor-pointer rounded-xl p-4 text-center border-2 transition-all duration-300 relative ${
+                          method === "email" 
+                            ? "border-blue-500 bg-blue-50" 
+                            : "border-gray-200 hover:border-blue-300"
+                        }`}
+                      >
+                        <FiMail className={`mx-auto mb-2 text-2xl ${method === "email" ? "text-blue-600" : "text-gray-500"}`} />
+                        <span className={`text-sm font-semibold block ${method === "email" ? "text-blue-700" : "text-gray-700"}`}>Email</span>
+                        <p className="text-xs text-gray-400 mt-1">Check inbox</p>
+                        {method === "email" && <FiCheckCircle className="absolute top-2 right-2 text-blue-500" size={14} />}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <button type="submit" className="submit-btn" disabled={loading}>
-                  {loading ? (
-                    <span className="btn-loading">
-                      <FiSend className="spinner" /> Sending...
-                    </span>
-                  ) : (
-                    <span>Continue →</span>
-                  )}
-                </button>
-              </form>
-            ) : (
-              // Admin Login Form
-              <form className="login-form" onSubmit={handleAdminLogin}>
-                <div className="form-header">
-                  <h2>Welcome back! 👨‍💼</h2>
-                  <p>Admin access only</p>
-                </div>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+                  >
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <FiSend className="animate-spin" /> Sending OTP...
+                      </span>
+                    ) : (
+                      <span>Continue →</span>
+                    )}
+                  </button>
 
-                <div className="input-field">
-                  <input
-                    type="email"
-                    id="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    placeholder=" "
-                  />
-                  <label htmlFor="email">Email Address</label>
-                  <FiMail className="field-icon" />
-                </div>
-
-                <div className="input-field">
-                  <input
-                    type="password"
-                    id="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    placeholder=" "
-                  />
-                  <label htmlFor="password">Password</label>
-                  <FiLock className="field-icon" />
-                </div>
-
-                <button type="submit" className="submit-btn" disabled={loading}>
-                  {loading ? (
-                    <span className="btn-loading">
-                      <FiSend className="spinner" /> Logging in...
-                    </span>
-                  ) : (
-                    <span>Login →</span>
-                  )}
-                </button>
-              </form>
-            )}
-
-            <div className="form-footer">
-              <p className="demo-note">
-                {!isAdmin ? (
-                  <>✨ No password needed. Just your phone number or email.</>
-                ) : (
-                  <>🔐 Demo: admin@otpless.com / Admin@123</>
-                )}
-              </p>
+                  <div className="text-center pt-4">
+                    <p className="text-xs text-gray-400 bg-gray-50 inline-block px-5 py-2.5 rounded-full">
+                      ✨ No password needed. Just your phone number or email.
+                    </p>
+                  </div>
+                </form>
+              )}
             </div>
           </div>
         </div>
       </div>
-
-      <style>{`
-        * {
-          margin: 0;
-          padding: 0;
-          box-sizing: border-box;
-        }
-
-        .login-root {
-          min-height: 100vh;
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Inter', sans-serif;
-          position: relative;
-          overflow: hidden;
-          background: #f0f4f8;
-        }
-
-        .login-backdrop {
-          position: absolute;
-          inset: 0;
-          background: radial-gradient(circle at 20% 50%, rgba(79, 70, 229, 0.08), transparent 50%),
-                      radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.06), transparent 60%);
-          pointer-events: none;
-        }
-
-        .login-grid {
-          display: grid;
-          grid-template-columns: 1fr 1.1fr;
-          min-height: 100vh;
-          position: relative;
-          z-index: 1;
-        }
-
-        /* Left Side - Brand */
-        .login-brand {
-          background: linear-gradient(135deg, #1e1b4b 0%, #2e1065 100%);
-          color: white;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 3rem;
-          position: relative;
-          overflow: hidden;
-        }
-
-        .login-brand::before {
-          content: '';
-          position: absolute;
-          top: -30%;
-          left: -20%;
-          width: 80%;
-          height: 80%;
-          background: radial-gradient(circle, rgba(139, 92, 246, 0.2), transparent);
-          border-radius: 50%;
-        }
-
-        .brand-content {
-          max-width: 450px;
-          position: relative;
-          z-index: 2;
-        }
-
-        .brand-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.5rem;
-          padding: 0.35rem 1rem;
-          background: rgba(255, 255, 255, 0.1);
-          backdrop-filter: blur(10px);
-          border-radius: 40px;
-          font-size: 0.75rem;
-          font-weight: 500;
-          margin-bottom: 1.5rem;
-          letter-spacing: 0.5px;
-          width: fit-content;
-        }
-
-        .brand-title {
-          font-size: 3rem;
-          font-weight: 700;
-          line-height: 1.2;
-          margin-bottom: 1.5rem;
-        }
-
-        .brand-title span {
-          background: linear-gradient(135deg, #a78bfa, #c084fc);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
-
-        .brand-desc {
-          color: #c4b5fd;
-          line-height: 1.6;
-          margin-bottom: 2rem;
-          font-size: 0.95rem;
-        }
-
-        .brand-stats {
-          display: flex;
-          gap: 2rem;
-          padding-top: 1rem;
-          border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .stat {
-          display: flex;
-          flex-direction: column;
-          gap: 0.25rem;
-        }
-
-        .stat-icon {
-          color: #a78bfa;
-          font-size: 1.25rem;
-        }
-
-        .stat-number {
-          font-size: 1.5rem;
-          font-weight: 700;
-          color: white;
-        }
-
-        .stat-label {
-          font-size: 0.75rem;
-          color: #a78bfa;
-        }
-
-        /* Right Side - Form */
-        .login-form-wrapper {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: #ffffff;
-          padding: 2rem;
-        }
-
-        .login-form-card {
-          max-width: 440px;
-          width: 100%;
-          background: white;
-          border-radius: 28px;
-        }
-
-        .form-toggle {
-          display: flex;
-          gap: 0.5rem;
-          background: #f1f5f9;
-          padding: 0.25rem;
-          border-radius: 60px;
-          margin-bottom: 2rem;
-        }
-
-        .toggle-option {
-          flex: 1;
-          padding: 0.6rem;
-          border: none;
-          background: transparent;
-          border-radius: 40px;
-          font-size: 0.9rem;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 0.5rem;
-          color: #64748b;
-        }
-
-        .toggle-option.active {
-          background: white;
-          color: #1e293b;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        }
-
-        .login-form {
-          width: 100%;
-        }
-
-        .form-header {
-          margin-bottom: 1.75rem;
-        }
-
-        .form-header h2 {
-          font-size: 1.75rem;
-          font-weight: 600;
-          color: #1e293b;
-          margin-bottom: 0.5rem;
-        }
-
-        .form-header p {
-          color: #64748b;
-          font-size: 0.9rem;
-        }
-
-        .input-field {
-          position: relative;
-          margin-bottom: 1.5rem;
-        }
-
-        .input-field input {
-          width: 100%;
-          padding: 1rem 1rem 1rem 3rem;
-          font-size: 0.95rem;
-          border: 1.5px solid #e2e8f0;
-          border-radius: 16px;
-          background: #fafcfc;
-          transition: all 0.2s;
-          outline: none;
-        }
-
-        .input-field input:focus {
-          border-color: #8b5cf6;
-          background: white;
-          box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.08);
-        }
-
-        .input-field label {
-          position: absolute;
-          left: 3rem;
-          top: 50%;
-          transform: translateY(-50%);
-          color: #94a3b8;
-          transition: 0.2s;
-          pointer-events: none;
-          background: transparent;
-          padding: 0 0.25rem;
-          font-size: 0.9rem;
-        }
-
-        .input-field input:focus + label,
-        .input-field input:not(:placeholder-shown) + label {
-          top: 0;
-          font-size: 0.7rem;
-          transform: translateY(-50%);
-          background: white;
-          color: #8b5cf6;
-        }
-
-        .field-icon {
-          position: absolute;
-          left: 1rem;
-          top: 50%;
-          transform: translateY(-50%);
-          font-size: 1.2rem;
-          color: #94a3b8;
-        }
-
-        .method-selector {
-          margin-bottom: 1.75rem;
-        }
-
-        .method-selector label {
-          display: block;
-          font-size: 0.8rem;
-          font-weight: 500;
-          color: #475569;
-          margin-bottom: 0.75rem;
-        }
-
-        .method-cards {
-          display: flex;
-          gap: 0.75rem;
-        }
-
-        .method-card {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 0.5rem;
-          padding: 0.85rem;
-          border: 1.5px solid #e2e8f0;
-          border-radius: 16px;
-          background: white;
-          cursor: pointer;
-          transition: all 0.2s;
-          position: relative;
-        }
-
-        .method-card:hover {
-          border-color: #cbd5e1;
-          background: #f8fafc;
-          transform: translateY(-2px);
-        }
-
-        .method-card.selected {
-          border-color: #8b5cf6;
-          background: #f5f3ff;
-        }
-
-        .method-icon {
-          font-size: 1.8rem;
-          color: #64748b;
-        }
-
-        .method-card.selected .method-icon {
-          color: #8b5cf6;
-        }
-
-        .method-name {
-          font-size: 0.85rem;
-          font-weight: 600;
-          color: #1e293b;
-        }
-
-        .method-note {
-          font-size: 0.65rem;
-          color: #94a3b8;
-        }
-
-        .check-icon {
-          position: absolute;
-          top: 0.5rem;
-          right: 0.5rem;
-          font-size: 0.9rem;
-          color: #8b5cf6;
-        }
-
-        .submit-btn {
-          width: 100%;
-          padding: 0.9rem;
-          background: linear-gradient(135deg, #6366f1, #8b5cf6);
-          color: white;
-          border: none;
-          border-radius: 40px;
-          font-size: 0.95rem;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s;
-          margin-bottom: 0.75rem;
-        }
-
-        .submit-btn:hover:not(:disabled) {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-        }
-
-        .submit-btn:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-
-        .btn-loading {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.5rem;
-        }
-
-        .spinner {
-          animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-
-        .form-footer {
-          text-align: center;
-          margin-top: 1.25rem;
-        }
-
-        .demo-note {
-          font-size: 0.7rem;
-          color: #94a3b8;
-          background: #f8fafc;
-          padding: 0.6rem;
-          border-radius: 20px;
-        }
-
-        @media (max-width: 900px) {
-          .login-grid {
-            grid-template-columns: 1fr;
-          }
-          .login-brand {
-            padding: 2rem;
-            text-align: center;
-          }
-          .brand-badge {
-            margin-left: auto;
-            margin-right: auto;
-          }
-          .brand-stats {
-            justify-content: center;
-          }
-          .form-toggle {
-            max-width: 280px;
-            margin-left: auto;
-            margin-right: auto;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .method-cards {
-            flex-direction: column;
-          }
-          .login-form-card {
-            padding: 0;
-          }
-          .brand-title {
-            font-size: 2rem;
-          }
-        }
-      `}</style>
     </div>
   );
 }
