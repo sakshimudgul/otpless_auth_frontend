@@ -8,22 +8,29 @@ import {
   FiUser, FiPhone, FiMail, FiCheckCircle, 
   FiHome, FiRefreshCw, FiMenu,
   FiTrendingUp, FiClock, FiEdit2,
-  FiPlus, FiX, FiBell, FiSettings, FiHelpCircle
+  FiPlus, FiX, FiBell, FiSettings, FiHelpCircle,
+  FiBriefcase
 } from 'react-icons/fi';
 import { MdAdminPanelSettings, MdSms, MdVerified } from 'react-icons/md';
 import { FaWhatsapp } from 'react-icons/fa';
 
 export default function AdminDashboard() {
   const [users, setUsers] = useState([]);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
+  const [businessUsers, setBusinessUsers] = useState([]);
+  const [showBusinessModal, setShowBusinessModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+  const [activeTab, setActiveTab] = useState('users');
   const [notification, setNotification] = useState({ show: false, message: '', type: '' });
-  const [formData, setFormData] = useState({ 
-    name: '', phone: '', email: '', password: '', is_active: true 
+  const [businessFormData, setBusinessFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    business_name: '',
+    is_active: true
   });
   const { user, logout: clearStore, token, setToken, setUser, setUserRole } = useAuthStore();
   const navigate = useNavigate();
@@ -31,11 +38,11 @@ export default function AdminDashboard() {
   // Check authentication on mount
   useEffect(() => {
     const checkAuth = async () => {
-      const accessToken = localStorage.getItem('accessToken');
+      const accessToken = localStorage.getItem('token');
       const storeToken = token;
       
       if (!accessToken && !storeToken) {
-        navigate('/');
+        navigate('/admin/login');
         return;
       }
       
@@ -51,14 +58,14 @@ export default function AdminDashboard() {
             setUserRole(response.data.user.role || 'admin');
           }
           fetchUsers();
+          fetchBusinessUsers();
         } else {
           throw new Error('Invalid response');
         }
       } catch (error) {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('token');
         clearStore();
-        navigate('/');
+        navigate('/admin/login');
       }
     };
     
@@ -68,18 +75,26 @@ export default function AdminDashboard() {
   const fetchUsers = async () => {
     setRefreshing(true);
     try {
-      const response = await api.get('/auth/admin/users');
+      const response = await api.get('/admin/users');
       setUsers(response.data.users || []);
     } catch (error) {
       if (error.response?.status === 401) {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('token');
         clearStore();
-        navigate('/');
+        navigate('/admin/login');
       }
       showNotification('Failed to fetch users', 'error');
     } finally {
       setRefreshing(false);
+    }
+  };
+
+  const fetchBusinessUsers = async () => {
+    try {
+      const response = await api.get('/admin/business-users');
+      setBusinessUsers(response.data.users || []);
+    } catch (error) {
+      console.error('Failed to fetch business users:', error);
     }
   };
 
@@ -88,51 +103,41 @@ export default function AdminDashboard() {
     setTimeout(() => setNotification({ show: false, message: '', type: '' }), 3000);
   };
 
-  const handleCreateUser = async (e) => {
+  const handleCreateBusinessUser = async (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.phone) {
-      showNotification('Name and phone number are required', 'error');
+    if (!businessFormData.name || !businessFormData.email || !businessFormData.password) {
+      showNotification('Name, email and password are required', 'error');
       return;
     }
     
     setLoading(true);
     try {
-      await api.post('/auth/admin/users', {
-        name: formData.name,
-        phone: formData.phone,
-        email: formData.email || null,
-        password: formData.password || null,
-        is_active: formData.is_active
+      const response = await api.post('/admin/business-users', {
+        name: businessFormData.name,
+        email: businessFormData.email,
+        phone: businessFormData.phone || null,
+        password: businessFormData.password,
+        business_name: businessFormData.business_name || null,
+        is_active: businessFormData.is_active
       });
       
-      showNotification('User created successfully!', 'success');
-      setShowAddModal(false);
-      setFormData({ name: '', phone: '', email: '', password: '', is_active: true });
-      fetchUsers();
-    } catch (error) {
-      showNotification(error.response?.data?.error || 'Failed to create user', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleUpdateUser = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      await api.put(`/auth/admin/users/${editingUser.id}`, {
-        name: formData.name,
-        phone: formData.phone,
-        email: formData.email || null,
-        is_active: formData.is_active
-      });
+      console.log('Business user created:', response.data);
       
-      showNotification('User updated successfully!', 'success');
-      setEditingUser(null);
-      setFormData({ name: '', phone: '', email: '', password: '', is_active: true });
+      showNotification('Business user created successfully!', 'success');
+      setShowBusinessModal(false);
+      setBusinessFormData({
+        name: '',
+        email: '',
+        phone: '',
+        password: '',
+        business_name: '',
+        is_active: true
+      });
+      fetchBusinessUsers();
       fetchUsers();
     } catch (error) {
-      showNotification(error.response?.data?.error || 'Failed to update user', 'error');
+      console.error('Create business user error:', error);
+      showNotification(error.response?.data?.error || 'Failed to create business user', 'error');
     } finally {
       setLoading(false);
     }
@@ -140,10 +145,11 @@ export default function AdminDashboard() {
 
   const handleDeleteUser = async (id, name) => {
     try {
-      await api.delete(`/auth/admin/users/${id}`);
+      await api.delete(`/admin/users/${id}`);
       showNotification(`${name} deleted successfully`, 'success');
       setShowDeleteConfirm(null);
       fetchUsers();
+      fetchBusinessUsers();
     } catch (error) {
       showNotification('Failed to delete user', 'error');
     }
@@ -152,55 +158,19 @@ export default function AdminDashboard() {
   const handleLogout = async () => {
     await logout();
     clearStore();
-    navigate('/');
+    navigate('/admin/login');
   };
 
-  const openAddModal = () => {
-    setEditingUser(null);
-    setFormData({ name: '', phone: '', email: '', password: '', is_active: true });
-    setShowAddModal(true);
-  };
-
-  const openEditModal = (user) => {
-    setEditingUser(user);
-    setFormData({
-      name: user.name,
-      phone: user.phone_number,
-      email: user.email || '',
-      is_active: user.is_active,
-      password: ''
-    });
-    setShowAddModal(true);
+  const openBusinessModal = () => {
+    setShowBusinessModal(true);
   };
 
   const stats = {
     totalUsers: users.length,
     activeUsers: users.filter(u => u.is_active).length,
+    totalBusiness: businessUsers.length,
+    activeBusiness: businessUsers.filter(u => u.is_active).length,
     totalLogins: users.reduce((sum, u) => sum + (u.login_count || 0), 0),
-    todayLogins: users.filter(u => {
-      if (!u.last_login) return false;
-      const today = new Date().toDateString();
-      return new Date(u.last_login).toDateString() === today;
-    }).length
-  };
-
-  const getMethodIcon = (method) => {
-    if (!method) return null;
-    switch(method) {
-      case 'sms': return <MdSms size={14} className="text-purple-600" />;
-      case 'whatsapp': return <FaWhatsapp size={14} className="text-green-600" />;
-      case 'email': return <FiMail size={14} className="text-blue-600" />;
-      default: return null;
-    }
-  };
-
-  const getMethodColor = (method) => {
-    switch(method) {
-      case 'sms': return 'bg-purple-100 text-purple-700';
-      case 'whatsapp': return 'bg-green-100 text-green-700';
-      case 'email': return 'bg-blue-100 text-blue-700';
-      default: return 'bg-gray-100 text-gray-500';
-    }
   };
 
   return (
@@ -213,14 +183,6 @@ export default function AdminDashboard() {
           {notification.message}
         </div>
       )}
-
-      {/* Mobile Menu Button */}
-      <button 
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md"
-      >
-        <FiMenu size={22} />
-      </button>
 
       {/* Sidebar */}
       <aside className={`fixed top-0 left-0 z-40 w-72 h-screen bg-gradient-to-b from-slate-900 to-slate-800 text-white transition-transform duration-300 ease-in-out ${
@@ -252,22 +214,28 @@ export default function AdminDashboard() {
           </div>
 
           <nav className="flex-1 p-4 space-y-1">
-            <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-white/10 text-white">
-              <FiHome size={18} />
-              <span>Dashboard</span>
-            </a>
-            <button onClick={openAddModal} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all">
-              <FiUserPlus size={18} />
-              <span>Add New User</span>
-            </button>
-            <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all">
+            <button 
+              onClick={() => setActiveTab('users')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                activeTab === 'users' ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'
+              }`}
+            >
               <FiUsers size={18} />
-              <span>Manage Users</span>
-            </a>
-            <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all">
-              <FiSettings size={18} />
-              <span>Settings</span>
-            </a>
+              <span>End Users</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('business')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                activeTab === 'business' ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              <FiBriefcase size={18} />
+              <span>Business Users</span>
+            </button>
+            <button onClick={openBusinessModal} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-600/20 text-white hover:bg-blue-600/30 transition-all">
+              <FiUserPlus size={18} />
+              <span>Add Business User</span>
+            </button>
           </nav>
 
           <div className="p-4 border-t border-white/10">
@@ -279,11 +247,6 @@ export default function AdminDashboard() {
         </div>
       </aside>
 
-      {/* Overlay for mobile */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setSidebarOpen(false)}></div>
-      )}
-
       {/* Main Content */}
       <main className="lg:ml-72 p-6">
         <div className="mb-8">
@@ -292,30 +255,35 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-xl p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
                 <FiUsers className="text-purple-600" size={24} />
               </div>
               <span className="text-2xl font-bold text-gray-800">{stats.totalUsers}</span>
             </div>
-            <h3 className="text-gray-600 font-medium">Total Users</h3>
-            <p className="text-sm text-gray-400 mt-1">All registered users</p>
+            <h3 className="text-gray-600 font-medium">Total End Users</h3>
           </div>
-
-          <div className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div className="bg-white rounded-xl p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                <FiBriefcase className="text-blue-600" size={24} />
+              </div>
+              <span className="text-2xl font-bold text-gray-800">{stats.totalBusiness}</span>
+            </div>
+            <h3 className="text-gray-600 font-medium">Business Users</h3>
+          </div>
+          <div className="bg-white rounded-xl p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
                 <FiCheckCircle className="text-green-600" size={24} />
               </div>
-              <span className="text-2xl font-bold text-gray-800">{stats.activeUsers}</span>
+              <span className="text-2xl font-bold text-gray-800">{stats.activeBusiness}</span>
             </div>
-            <h3 className="text-gray-600 font-medium">Active Users</h3>
-            <p className="text-sm text-gray-400 mt-1">{stats.totalUsers ? Math.round((stats.activeUsers / stats.totalUsers) * 100) : 0}% of total</p>
+            <h3 className="text-gray-600 font-medium">Active Business</h3>
           </div>
-
-          <div className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div className="bg-white rounded-xl p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
                 <FiTrendingUp className="text-orange-600" size={24} />
@@ -323,18 +291,6 @@ export default function AdminDashboard() {
               <span className="text-2xl font-bold text-gray-800">{stats.totalLogins}</span>
             </div>
             <h3 className="text-gray-600 font-medium">Total Logins</h3>
-            <p className="text-sm text-gray-400 mt-1">Across all users</p>
-          </div>
-
-          <div className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                <FiClock className="text-blue-600" size={24} />
-              </div>
-              <span className="text-2xl font-bold text-gray-800">{stats.todayLogins}</span>
-            </div>
-            <h3 className="text-gray-600 font-medium">Today's Logins</h3>
-            <p className="text-sm text-gray-400 mt-1">Active today</p>
           </div>
         </div>
 
@@ -342,37 +298,35 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex items-center gap-3">
-              <FiUsers className="text-purple-600" size={20} />
-              <h2 className="text-lg font-semibold text-gray-800">All Users</h2>
-              <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">{users.length} total</span>
+              {activeTab === 'users' ? (
+                <FiUsers className="text-purple-600" size={20} />
+              ) : (
+                <FiBriefcase className="text-blue-600" size={20} />
+              )}
+              <h2 className="text-lg font-semibold text-gray-800">
+                {activeTab === 'users' ? 'End Users' : 'Business Users'}
+              </h2>
+              <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">
+                {activeTab === 'users' ? users.length : businessUsers.length} total
+              </span>
             </div>
             <div className="flex gap-3">
-              <button onClick={fetchUsers} className="p-2 text-gray-500 hover:text-purple-600 transition-colors">
+              <button onClick={activeTab === 'users' ? fetchUsers : fetchBusinessUsers} className="p-2 text-gray-500 hover:text-purple-600 transition-colors">
                 <FiRefreshCw className={refreshing ? 'animate-spin' : ''} size={18} />
               </button>
-              <button onClick={openAddModal} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:from-indigo-600 hover:to-purple-700 transition-all">
-                <FiPlus size={18} />
-                Add User
-              </button>
+              {activeTab === 'business' && (
+                <button onClick={openBusinessModal} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded-lg hover:from-blue-600 hover:to-cyan-700 transition-all">
+                  <FiPlus size={18} />
+                  Add Business
+                </button>
+              )}
             </div>
           </div>
 
           {refreshing ? (
             <div className="flex flex-col items-center justify-center py-16">
               <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
-              <p className="mt-4 text-gray-500">Loading users...</p>
-            </div>
-          ) : users.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16">
-              <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <FiUsers size={32} className="text-gray-400" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-800 mb-2">No users yet</h3>
-              <p className="text-gray-500 mb-4">Create your first user to get started</p>
-              <button onClick={openAddModal} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg">
-                <FiUserPlus size={18} />
-                Add Your First User
-              </button>
+              <p className="mt-4 text-gray-500">Loading...</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -381,15 +335,14 @@ export default function AdminDashboard() {
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Business</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Logins</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Login</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {users.map((userItem) => (
+                  {(activeTab === 'users' ? users : businessUsers).map((userItem) => (
                     <tr key={userItem.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
@@ -405,7 +358,7 @@ export default function AdminDashboard() {
                       <td className="px-6 py-4">
                         <div className="space-y-1">
                           <p className="flex items-center gap-2 text-sm text-gray-600">
-                            <FiPhone size={12} /> {userItem.phone_number}
+                            <FiPhone size={12} /> {userItem.phone_number || '—'}
                           </p>
                           {userItem.email && (
                             <p className="flex items-center gap-2 text-sm text-gray-500">
@@ -415,30 +368,13 @@ export default function AdminDashboard() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
+                        {userItem.business_name || '—'}
+                      </td>
+                      <td className="px-6 py-4">
                         <div className="inline-flex flex-col items-center px-3 py-1 bg-green-50 rounded-lg">
                           <span className="text-lg font-bold text-green-600">{userItem.login_count || 0}</span>
                           <span className="text-xs text-gray-500">times</span>
                         </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        {userItem.last_login ? (
-                          <div>
-                            <p className="text-sm text-gray-800">{new Date(userItem.last_login).toLocaleDateString()}</p>
-                            <p className="text-xs text-gray-400">{new Date(userItem.last_login).toLocaleTimeString()}</p>
-                          </div>
-                        ) : (
-                          <span className="text-sm text-gray-400">Never</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        {userItem.last_login_method ? (
-                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getMethodColor(userItem.last_login_method)}`}>
-                            {getMethodIcon(userItem.last_login_method)}
-                            {userItem.last_login_method}
-                          </span>
-                        ) : (
-                          <span className="text-sm text-gray-400">—</span>
-                        )}
                       </td>
                       <td className="px-6 py-4">
                         <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
@@ -449,9 +385,6 @@ export default function AdminDashboard() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex gap-2">
-                          <button onClick={() => openEditModal(userItem)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                            <FiEdit2 size={16} />
-                          </button>
                           <button onClick={() => setShowDeleteConfirm(userItem)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                             <FiTrash2 size={16} />
                           </button>
@@ -466,77 +399,85 @@ export default function AdminDashboard() {
         </div>
       </main>
 
-      {/* Add/Edit User Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowAddModal(false); setEditingUser(null); }}>
+      {/* Add Business User Modal */}
+      {showBusinessModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowBusinessModal(false); }}>
           <div className="bg-white rounded-2xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <div className="p-6 border-b border-gray-100 flex items-center gap-3">
-              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                {editingUser ? <FiEdit2 className="text-purple-600" size={20} /> : <FiUserPlus className="text-purple-600" size={20} />}
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <FiBriefcase className="text-blue-600" size={20} />
               </div>
-              <h2 className="text-xl font-semibold text-gray-800">{editingUser ? 'Edit User' : 'Create New User'}</h2>
-              <button onClick={() => { setShowAddModal(false); setEditingUser(null); }} className="ml-auto text-gray-400 hover:text-gray-600">
+              <h2 className="text-xl font-semibold text-gray-800">Add Business User</h2>
+              <button onClick={() => { setShowBusinessModal(false); }} className="ml-auto text-gray-400 hover:text-gray-600">
                 <FiX size={20} />
               </button>
             </div>
-            <form onSubmit={editingUser ? handleUpdateUser : handleCreateUser} className="p-6 space-y-4">
+            <form onSubmit={handleCreateBusinessUser} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
                 <input
                   type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                  value={businessFormData.name}
+                  onChange={(e) => setBusinessFormData({ ...businessFormData, name: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
-                <input
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
                 <input
                   type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                  value={businessFormData.email}
+                  onChange={(e) => setBusinessFormData({ ...businessFormData, email: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  required
                 />
               </div>
-              {!editingUser && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                  <input
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
-                    placeholder="Leave empty for no password"
-                  />
-                </div>
-              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                <input
+                  type="tel"
+                  value={businessFormData.phone}
+                  onChange={(e) => setBusinessFormData({ ...businessFormData, phone: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
+                <input
+                  type="text"
+                  value={businessFormData.business_name}
+                  onChange={(e) => setBusinessFormData({ ...businessFormData, business_name: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                <input
+                  type="password"
+                  value={businessFormData.password}
+                  onChange={(e) => setBusinessFormData({ ...businessFormData, password: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  required
+                  minLength={6}
+                />
+              </div>
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
-                  id="is_active"
-                  checked={formData.is_active}
-                  onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                  className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+                  id="business_is_active"
+                  checked={businessFormData.is_active}
+                  onChange={(e) => setBusinessFormData({ ...businessFormData, is_active: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                 />
-                <label htmlFor="is_active" className="text-sm text-gray-700">Active Account</label>
+                <label htmlFor="business_is_active" className="text-sm text-gray-700">Active Account</label>
               </div>
               <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => { setShowAddModal(false); setEditingUser(null); }} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                <button type="button" onClick={() => { setShowBusinessModal(false); }} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
                   Cancel
                 </button>
-                <button type="submit" disabled={loading} className="flex-1 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:from-indigo-600 hover:to-purple-700 transition-all disabled:opacity-50">
-                  {loading ? 'Processing...' : (editingUser ? 'Update User' : 'Create User')}
+                <button type="submit" disabled={loading} className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded-lg hover:from-blue-600 hover:to-cyan-700 transition-all disabled:opacity-50">
+                  {loading ? 'Creating...' : 'Create Business User'}
                 </button>
               </div>
             </form>

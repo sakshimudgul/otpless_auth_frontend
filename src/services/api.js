@@ -7,13 +7,12 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true, // ADD THIS - Important for cookies
+  withCredentials: true,
 });
 
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
-    // You can keep your existing token logic
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -36,10 +35,12 @@ api.interceptors.response.use(
   (error) => {
     console.error('Response error:', error.response?.status, error.response?.data);
     if (error.response?.status === 401) {
-      // Clear both localStorage and cookie will be cleared by backend
       localStorage.removeItem('token');
       localStorage.removeItem('auth-storage');
-      if (window.location.pathname !== '/') {
+      // Don't redirect if already on login page
+      if (!window.location.pathname.includes('/login') && 
+          !window.location.pathname.includes('/enduser') &&
+          !window.location.pathname.includes('/register')) {
         window.location.href = '/';
       }
     }
