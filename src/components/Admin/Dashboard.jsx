@@ -9,7 +9,7 @@ import {
   FiHome, FiRefreshCw, FiMenu,
   FiTrendingUp, FiClock, FiEdit2,
   FiPlus, FiX, FiBell, FiSettings, FiHelpCircle,
-  FiBriefcase
+  FiBriefcase, FiSidebar
 } from 'react-icons/fi';
 import { MdAdminPanelSettings, MdSms, MdVerified } from 'react-icons/md';
 import { FaWhatsapp } from 'react-icons/fa';
@@ -112,7 +112,7 @@ export default function AdminDashboard() {
     
     setLoading(true);
     try {
-      const response = await api.post('/admin/business-users', {
+      await api.post('/admin/business-users', {
         name: businessFormData.name,
         email: businessFormData.email,
         phone: businessFormData.phone || null,
@@ -120,8 +120,6 @@ export default function AdminDashboard() {
         business_name: businessFormData.business_name || null,
         is_active: businessFormData.is_active
       });
-      
-      console.log('Business user created:', response.data);
       
       showNotification('Business user created successfully!', 'success');
       setShowBusinessModal(false);
@@ -136,7 +134,6 @@ export default function AdminDashboard() {
       fetchBusinessUsers();
       fetchUsers();
     } catch (error) {
-      console.error('Create business user error:', error);
       showNotification(error.response?.data?.error || 'Failed to create business user', 'error');
     } finally {
       setLoading(false);
@@ -165,6 +162,10 @@ export default function AdminDashboard() {
     setShowBusinessModal(true);
   };
 
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
+
   const stats = {
     totalUsers: users.length,
     activeUsers: users.filter(u => u.is_active).length,
@@ -184,11 +185,28 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {/* Mobile Menu Button */}
+      <button 
+        onClick={toggleSidebar}
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md hover:bg-gray-50 transition-colors"
+      >
+        <FiMenu size={24} className="text-gray-700" />
+      </button>
+
+      {/* Overlay for mobile */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={toggleSidebar}
+        ></div>
+      )}
+
       {/* Sidebar */}
       <aside className={`fixed top-0 left-0 z-40 w-72 h-screen bg-gradient-to-b from-slate-900 to-slate-800 text-white transition-transform duration-300 ease-in-out ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       }`}>
         <div className="flex flex-col h-full">
+          {/* Sidebar Header */}
           <div className="p-6 border-b border-white/10">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
@@ -201,19 +219,21 @@ export default function AdminDashboard() {
             </div>
           </div>
 
+          {/* Admin Info */}
           <div className="p-6 border-b border-white/10">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center text-lg font-semibold">
                 {user?.name?.charAt(0) || 'A'}
               </div>
               <div>
-                <h4 className="font-semibold">{user?.name || 'Administrator'}</h4>
-                <p className="text-xs text-white/50">Admin</p>
+                <h4 className="font-semibold">{user?.name || 'Admin'}</h4>
+                <p className="text-xs text-white/50">Administrator</p>
               </div>
             </div>
           </div>
 
-          <nav className="flex-1 p-4 space-y-1">
+          {/* Navigation */}
+          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
             <button 
               onClick={() => setActiveTab('users')}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
@@ -232,12 +252,16 @@ export default function AdminDashboard() {
               <FiBriefcase size={18} />
               <span>Business Users</span>
             </button>
-            <button onClick={openBusinessModal} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-600/20 text-white hover:bg-blue-600/30 transition-all">
+            <button 
+              onClick={openBusinessModal} 
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-600/20 text-white hover:bg-blue-600/30 transition-all"
+            >
               <FiUserPlus size={18} />
               <span>Add Business User</span>
             </button>
           </nav>
 
+          {/* Logout */}
           <div className="p-4 border-t border-white/10">
             <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all">
               <FiLogOut size={18} />
@@ -248,55 +272,55 @@ export default function AdminDashboard() {
       </aside>
 
       {/* Main Content */}
-      <main className="lg:ml-72 p-6">
+      <main className="lg:ml-72 p-4 md:p-6">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Dashboard</h1>
           <p className="text-gray-500 mt-1">Welcome back, {user?.name || 'Admin'}!</p>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl p-6 shadow-sm">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-8">
+          <div className="bg-white rounded-xl p-4 md:p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                <FiUsers className="text-purple-600" size={24} />
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                <FiUsers className="text-purple-600" size={20} />
               </div>
-              <span className="text-2xl font-bold text-gray-800">{stats.totalUsers}</span>
+              <span className="text-xl md:text-2xl font-bold text-gray-800">{stats.totalUsers}</span>
             </div>
-            <h3 className="text-gray-600 font-medium">Total End Users</h3>
+            <h3 className="text-xs md:text-sm text-gray-600 font-medium">Total End Users</h3>
           </div>
-          <div className="bg-white rounded-xl p-6 shadow-sm">
+          <div className="bg-white rounded-xl p-4 md:p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                <FiBriefcase className="text-blue-600" size={24} />
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                <FiBriefcase className="text-blue-600" size={20} />
               </div>
-              <span className="text-2xl font-bold text-gray-800">{stats.totalBusiness}</span>
+              <span className="text-xl md:text-2xl font-bold text-gray-800">{stats.totalBusiness}</span>
             </div>
-            <h3 className="text-gray-600 font-medium">Business Users</h3>
+            <h3 className="text-xs md:text-sm text-gray-600 font-medium">Business Users</h3>
           </div>
-          <div className="bg-white rounded-xl p-6 shadow-sm">
+          <div className="bg-white rounded-xl p-4 md:p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                <FiCheckCircle className="text-green-600" size={24} />
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                <FiCheckCircle className="text-green-600" size={20} />
               </div>
-              <span className="text-2xl font-bold text-gray-800">{stats.activeBusiness}</span>
+              <span className="text-xl md:text-2xl font-bold text-gray-800">{stats.activeBusiness}</span>
             </div>
-            <h3 className="text-gray-600 font-medium">Active Business</h3>
+            <h3 className="text-xs md:text-sm text-gray-600 font-medium">Active Business</h3>
           </div>
-          <div className="bg-white rounded-xl p-6 shadow-sm">
+          <div className="bg-white rounded-xl p-4 md:p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                <FiTrendingUp className="text-orange-600" size={24} />
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                <FiTrendingUp className="text-orange-600" size={20} />
               </div>
-              <span className="text-2xl font-bold text-gray-800">{stats.totalLogins}</span>
+              <span className="text-xl md:text-2xl font-bold text-gray-800">{stats.totalLogins}</span>
             </div>
-            <h3 className="text-gray-600 font-medium">Total Logins</h3>
+            <h3 className="text-xs md:text-sm text-gray-600 font-medium">Total Logins</h3>
           </div>
         </div>
 
         {/* Users Table */}
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="p-4 md:p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex items-center gap-3">
               {activeTab === 'users' ? (
                 <FiUsers className="text-purple-600" size={20} />
@@ -310,12 +334,18 @@ export default function AdminDashboard() {
                 {activeTab === 'users' ? users.length : businessUsers.length} total
               </span>
             </div>
-            <div className="flex gap-3">
-              <button onClick={activeTab === 'users' ? fetchUsers : fetchBusinessUsers} className="p-2 text-gray-500 hover:text-purple-600 transition-colors">
+            <div className="flex gap-3 w-full sm:w-auto">
+              <button 
+                onClick={activeTab === 'users' ? fetchUsers : fetchBusinessUsers} 
+                className="p-2 text-gray-500 hover:text-purple-600 transition-colors"
+              >
                 <FiRefreshCw className={refreshing ? 'animate-spin' : ''} size={18} />
               </button>
               {activeTab === 'business' && (
-                <button onClick={openBusinessModal} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded-lg hover:from-blue-600 hover:to-cyan-700 transition-all">
+                <button 
+                  onClick={openBusinessModal} 
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded-lg hover:from-blue-600 hover:to-cyan-700 transition-all text-sm w-full sm:w-auto justify-center"
+                >
                   <FiPlus size={18} />
                   Add Business
                 </button>
@@ -330,65 +360,68 @@ export default function AdminDashboard() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[600px]">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Business</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Logins</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                    <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                    <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Business</th>
+                    <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Logins</th>
+                    <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {(activeTab === 'users' ? users : businessUsers).map((userItem) => (
                     <tr key={userItem.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4">
+                      <td className="px-4 md:px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-lg flex items-center justify-center font-semibold text-indigo-600">
+                          <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-lg flex items-center justify-center font-semibold text-indigo-600 text-sm">
                             {userItem.name?.charAt(0)}
                           </div>
-                          <div>
-                            <p className="font-medium text-gray-800">{userItem.name}</p>
+                          <div className="min-w-0">
+                            <p className="font-medium text-gray-800 truncate">{userItem.name}</p>
                             <p className="text-xs text-gray-400">ID: {userItem.id?.slice(0, 8)}...</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 md:px-6 py-4">
                         <div className="space-y-1">
                           <p className="flex items-center gap-2 text-sm text-gray-600">
-                            <FiPhone size={12} /> {userItem.phone_number || '—'}
+                            <FiPhone size={12} className="flex-shrink-0" /> 
+                            <span className="truncate">{userItem.phone_number || '—'}</span>
                           </p>
                           {userItem.email && (
                             <p className="flex items-center gap-2 text-sm text-gray-500">
-                              <FiMail size={12} /> {userItem.email}
+                              <FiMail size={12} className="flex-shrink-0" /> 
+                              <span className="truncate">{userItem.email}</span>
                             </p>
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        {userItem.business_name || '—'}
+                      <td className="px-4 md:px-6 py-4">
+                        <span className="truncate block max-w-[100px]">{userItem.business_name || '—'}</span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 md:px-6 py-4">
                         <div className="inline-flex flex-col items-center px-3 py-1 bg-green-50 rounded-lg">
                           <span className="text-lg font-bold text-green-600">{userItem.login_count || 0}</span>
                           <span className="text-xs text-gray-500">times</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 md:px-6 py-4">
                         <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                           userItem.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                         }`}>
                           {userItem.is_active ? 'Active' : 'Inactive'}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex gap-2">
-                          <button onClick={() => setShowDeleteConfirm(userItem)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                            <FiTrash2 size={16} />
-                          </button>
-                        </div>
+                      <td className="px-4 md:px-6 py-4">
+                        <button 
+                          onClick={() => setShowDeleteConfirm(userItem)} 
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <FiTrash2 size={16} />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -402,8 +435,8 @@ export default function AdminDashboard() {
       {/* Add Business User Modal */}
       {showBusinessModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowBusinessModal(false); }}>
-          <div className="bg-white rounded-2xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-100 flex items-center gap-3">
+          <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-100 flex items-center gap-3 sticky top-0 bg-white z-10">
               <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                 <FiBriefcase className="text-blue-600" size={20} />
               </div>

@@ -245,7 +245,7 @@ export default function EndUserLogin() {
 
                 <div className="text-center pt-4">
                   <p className="text-xs text-gray-400 bg-gray-50 inline-block px-5 py-2.5 rounded-full">
-                    ✨ No password needed. Just your phone number or email.
+                     No password needed. Just your phone number or email.
                   </p>
                 </div>
               </form>

@@ -147,11 +147,7 @@ export default function AdminLogin() {
                   )}
                 </button>
 
-                <div className="text-center pt-4">
-                  <p className="text-xs text-gray-400 bg-gray-50 inline-block px-5 py-2.5 rounded-full">
-                    🔐 Demo: admin@otpless.com / Admin@123
-                  </p>
-                </div>
+                
               </form>
 
               <div className="mt-6 pt-6 border-t border-gray-200">
